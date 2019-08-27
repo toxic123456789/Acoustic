@@ -7,6 +7,7 @@ classdef TemperatureDataSound
 
 	methods
 		function obj = TemperatureDataSound(adr,T,angle)
+			% adr - directory adress
 			if isstr(adr)
 				if nargin < 2
 					errordlg('Not enougth temperature vector','Error');
