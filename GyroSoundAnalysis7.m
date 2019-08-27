@@ -1,4 +1,6 @@
 function main()
+	% function main
+	%
     ScrSize=get(0,'screensize');
     FigSize=[1600 800];
 %     FigSize=[1200 600];
