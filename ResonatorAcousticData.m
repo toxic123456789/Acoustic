@@ -28,6 +28,7 @@ classdef ResonatorAcousticData
 		function obj = ResonatorAcousticData(adr,angleStep)
 			% Open, recognize and processing data
 			% ===================================
+            [format, normList] = checkFileFormat(obj,adr);
 			if nargin < 1
 				[n p] = uigetfile('*.wav','Choose .WAV file for read');
 				adr = [p,n];
@@ -38,6 +39,7 @@ classdef ResonatorAcousticData
             if nargin > 1 
                 obj.AngleStep = angleStep;
             end
+            
 			Time_offset = 1000; % points
 			[M, Fs]= SeparateSound(obj,adr,Time_offset);
 			obj.ln = length(M);
@@ -324,7 +326,6 @@ classdef ResonatorAcousticData
         end
 
 
-
 		function Data = GetSoundDecrease(obj,Sound)
 			% Data = GetSoundDecrease(Sound)
 
@@ -380,8 +381,9 @@ classdef ResonatorAcousticData
 %             text(sDecr_time(e_decrease_ind),sDecr_data(e_decrease_ind)+0.01,['te = ',num2str(sDecr_time(e_decrease_ind)-sDecr_time(1))]);
 %             text(sDecr_time(e_decrease_ind2),sDecr_data2(e_decrease_ind2)+0.02,['te2 = ',num2str(sDecr_time(e_decrease_ind2)-sDecr_time(1))]);
 %             disp('diagnostic');
-		end
+        end
 
+        
 		function statValue = GetStat(obj,stat,name,column)
 			% statValue = GetStat(obj,stat,name,column)
 
@@ -410,7 +412,6 @@ classdef ResonatorAcousticData
 			end
 
 		end
-
 
 
 		function Show(obj,name,column)
@@ -585,15 +586,43 @@ classdef ResonatorAcousticData
                 	plot(xx(fr2_ind),yy(fr2_ind),'rv','MarkerSize',10);
                 	text(xx(fr2_ind)+0.05,yy(fr2_ind)+0.0002,['F2 = ',num2str(F2)]);
                 	text(xx(fr2_ind)+0.15,yy(fr2_ind)*0.707,['Q2 = ',num2str(Q2)]);
-                end      
-                
+                end       
             end
-
-
-
         end
         
+        
+        function [format, normList] = checkFileFormat(obj, adr)
+        	% function format = checkFileFormat(adr)
+        	% return such file format:
+        	% 'norm'
+        	% 'long'
+        	% if format 'norm' function return normList
+            format = '';
+        	[path,name] = fileparts(adr);
+        	if isempty(name) && ~isempty(path)
+        		% check contents of the directory
+        		listFiles = dir(path);
+        		j = 0; normList = [];
+        		for i = 1:length(listFiles)
+    				str = listFiles(i).name;
+        			if ~strcmp(str,'.')&&~strcmp(str,'..')
+        				% check format for normal by using reqexp
+						expression = '^d\d+_a\d+(\.\d+)*';
+						matchStr = regexp(str,expression,'match');
+        				if ~isempty(matchStr)
+	        				j = j+1;
+	        				normList{j} = matchStr{1};
+        				end
+        			end
+                end
+                if ~isempty(normList)
+                    format = 'norm';
+                else
+                    format = 'long';
+                end
+        	end
+        end
 
         
-	end
-end
+	end % methods
+end % classdef
