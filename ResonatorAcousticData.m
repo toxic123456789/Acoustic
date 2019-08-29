@@ -41,11 +41,17 @@ classdef ResonatorAcousticData
             end
             
 			Time_offset = 1000; % points
-			[M, Fs]= SeparateSound(obj,adr,Time_offset);
+			if strcmp(format,'old')
+				[M, Fs]= SeparateSound(obj,adr,Time_offset);
+			end
+			if strcmp(format,'norm')
+				for i = 1:length(normList)
+					[M{i}, Fs] = audioread([adr, normList{i}, '.wav']);
+				end
+			end
 			obj.ln = length(M);
 			obj.path = adr;
             obj.Fs = Fs;
-            obj.path = adr;
             
 			for i = 1:length(M)
 				% % % % % % % % % % % %
@@ -595,14 +601,14 @@ classdef ResonatorAcousticData
         	% function format = checkFileFormat(adr)
         	% return such file format:
         	% 'norm'
-        	% 'long'
+        	% 'old'
         	% if format 'norm' function return normList
             format = '';
         	[path,name] = fileparts(adr);
+            j = 0; normList = [];
         	if isempty(name) && ~isempty(path)
         		% check contents of the directory
         		listFiles = dir(path);
-        		j = 0; normList = [];
         		for i = 1:length(listFiles)
     				str = listFiles(i).name;
         			if ~strcmp(str,'.')&&~strcmp(str,'..')
@@ -615,12 +621,14 @@ classdef ResonatorAcousticData
         				end
         			end
                 end
-                if ~isempty(normList)
-                    format = 'norm';
-                else
-                    format = 'long';
-                end
-        	end
+            end
+            
+            if ~isempty(normList)
+                format = 'norm';
+            else
+                format = 'old';
+            end
+            
         end
 
         
