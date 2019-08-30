@@ -613,7 +613,7 @@ classdef ResonatorAcousticData
     				str = listFiles(i).name;
         			if ~strcmp(str,'.')&&~strcmp(str,'..')
         				% check format for normal by using reqexp
-						expression = '^d\d+_a\d+(\.\d+)*';
+						expression = '^d\d+(\.\d+)*_a\d+(\.\d+)*';
 						matchStr = regexp(str,expression,'match');
         				if ~isempty(matchStr)
 	        				j = j+1;
@@ -632,5 +632,19 @@ classdef ResonatorAcousticData
         end
 
         
+		function [temprVect,angleArr,nameArr] = ScanNormList(normList)
+			% function [temprVect,angleArr,nameArr] = ScanNormList(normList)
+			temprVect = [];
+			angleArr = [];
+			nameArr = [];
+			% find temperatures
+			expression = '^d(\d)+';
+			for i = 1:length(normList)
+				matchStr = regexp(normList{i},expression,'match');
+				temprVect(i) = str2num(matchStr(2:end));
+			end
+		end
+
+
 	end % methods
 end % classdef

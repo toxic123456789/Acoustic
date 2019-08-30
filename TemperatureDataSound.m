@@ -1,23 +1,29 @@
 classdef TemperatureDataSound 
 	properties
-        AngleStep = 9;
-		T = [];
-		D = struc('');
+		path = '';
 	end
 
 	methods
-		function obj = TemperatureDataSound(adr,T,angle)
+		function obj = TemperatureDataSound(adr)
 			% adr - directory adress
 			if isstr(adr)
-				if nargin < 2
-					errordlg('Not enougth temperature vector','Error');
-                    return;
+				[format, normList] = checkFileFormat(obj, adr);
+				if ~strcmp(format,'norm')
+					errordlg('unsupported format','unsupported format');
+					return;
+				end
+				[temprVect,angleArr,nameArr] = ScanNormList(obj,normList);
+				% Sort data by temperature and angle 
+				for i = 1:length(temprVect)
+					T_str = ['T',num2str(temprVect(i))];
+					for j = 1:length(nameArr{i})
+						A_str = ['A',num2str(angleArr{i}(j))];
+						obj.(T_str).(A_str) = ResonatorAcousticData([adr,nameArr{i}{j}]);
+                    end
+                    obj.(T_str).angles = angleArr{i};
+                    obj.(T_str).names = nameArr{i};
                 end
-                obj.T = T;
-				obj.D = Load(obj,adr,T);
-            end
-            if nargin > 2
-                obj.AngleStep = angle;
+                obj.T = tempVect;
             end
 		end
 
@@ -115,7 +121,76 @@ classdef TemperatureDataSound
 			end
 		end
 
-	end
+
+		function [format, normList] = checkFileFormat(obj, adr)
+        	% function format = checkFileFormat(adr)
+        	% return such file format:
+        	% 'norm'
+        	% 'old'
+        	% if format 'norm' function return normList
+            format = '';
+        	[path,name] = fileparts(adr);
+            j = 0; normList = [];
+        	if isempty(name) && ~isempty(path)
+        		% check contents of the directory
+        		listFiles = dir(path);
+        		for i = 1:length(listFiles)
+    				str = listFiles(i).name;
+        			if ~strcmp(str,'.')&&~strcmp(str,'..')
+        				% check format for normal by using reqexp
+						expression = '^d\d+(\.\d+)*_a\d+(\.\d+)*';
+						matchStr = regexp(str,expression,'match');
+        				if ~isempty(matchStr)
+	        				j = j+1;
+	        				normList{j} = matchStr{1};
+        				end
+        			end
+                end
+            end
+            if ~isempty(normList)
+                format = 'norm';
+            else
+                format = 'long';
+            end
+        end
+
+
+		function [temprVect,angleArr,nameArr] = ScanNormList(obj,normList)
+			% function [temprVect,angleArr,nameArr] = ScanNormList(normList)
+			temprVect = [];
+			angleArr = {};
+			nameArr = {};
+            nameArr_ = {};
+			% find temperatures
+			expression = '^d(\d)+';
+			for i = 1:length(normList)
+				matchStr = regexp(normList{i},expression,'match');
+				temprVect(i) = str2num(matchStr{1}(2:end));
+			end
+			[temprVect, ia, ic] = unique(temprVect,'stable');
+			ind = {};
+			for i = 1:length(temprVect)
+				ind{i} = find(ic==i);
+			end
+			% find angles
+			expression = '_a\d+(\.\d+)*';
+			for i = 1:length(temprVect)
+				for j = 1:length(ind{i})
+					matchStr = regexp(normList{ind{i}(j)},expression,'match');
+					angleArr{i}(j) = str2num(matchStr{1}(3:end));
+					nameArr_{i}{j} = [normList{ind{i}(j)},'.wav'];
+				end
+				[res, ind_] = sort(angleArr{i});
+				angleArr{i} = angleArr{i}(ind_);
+                for n = 1:length(nameArr_{i})
+                    nameArr{i}{n} = nameArr_{i}{ind_(n)};
+                end
+            end
+            disp(1);
+		end
+
+
+	end % methods 
 end
 
 
