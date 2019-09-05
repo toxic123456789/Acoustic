@@ -27,6 +27,7 @@ classdef TemperatureDataSound
                     end
                     obj.data.(T_str).angles = angleArr{i};
                     obj.data.(T_str).names = nameArr{i};
+                    obj.data.(T_str) = obj.SortData(obj,i);
                 end
                 obj.T = temprVect;
                 obj.path = adr;
@@ -139,10 +140,6 @@ classdef TemperatureDataSound
 		end
 
 
-
-
-
-
 		function statValue = getStat(obj,stat,name,column)
 			% statValue = getStat(obj,stat,name,column)
 
@@ -171,7 +168,6 @@ classdef TemperatureDataSound
 			end
 
 		end
-
 
 
 		function data = getData(obj,name,temperature,column);
@@ -203,6 +199,48 @@ classdef TemperatureDataSound
 			end
 
 		end
+
+
+		function data = SortData(obj,t_num)
+			% function data = SortData(obj,t_num) 
+			% sorting frequency,amplitude and Qfactor data
+			% after loading and processing sound data
+			% return data structure for each temperature test
+			% such as before but with sorting data by two resonanse
+			% frequencies 
+
+			Frequency(:,1) = obj.getData('Frequency',obj.T(t_num),1);
+			Frequency(:,2) = obj.getData('Frequency',obj.T(t_num),2);
+			Amplitude(:,1) = obj.getData('Amplitude',obj.T(t_num),1);
+			Amplitude(:,2) = obj.getData('Amplitude',obj.T(t_num),2);
+
+			% find idexes of the normal amplitudes, that not less than 1/2 of the maximum
+			all_ind_vect = 1:length(Frequency(:,1));
+			MaxA = max(Amplitude);
+			trust_ind_1 = find(Amplitude(:,1) > MaxA(1)/2);
+			trust_ind_2 = find(Amplitude(:,2) > MaxA(2)/2);
+			% find indexes of the unnormal (very low) amplitudes
+			A_distruct_ind_1 = all_ind_vect;
+			A_distruct_ind_2 = all_ind_vect;
+			A_distruct_ind_1(trust_ind_1) = [];
+			A_distruct_ind_2(trust_ind_2) = [];
+
+			% find mean frequencies by trust indexes
+			meanFq_1 = mean(Frequency(trust_ind_1,1));
+			meanFq_2 = mean(Frequency(trust_ind_2,2));
+
+			% find distruct indexes
+			distruct_ind_1 = find(abs(Frequency(:,1)-meanFq_1)>0.1);  
+			distruct_ind_2 = find(abs(Frequency(:,2)-meanFq_2)>0.1);  
+			% check distruct indexes by amplitudes
+			distruct_ind_1(setdiff(distruct_ind_1, A_distruct_ind_1)) = [];
+			distruct_ind_2(setdiff(distruct_ind_2, A_distruct_ind_2)) = [];
+
+			
+
+		end
+
+
 
 		
 		function [xx, yy] = InterpFreq(obj,temperature,angleN,bplot)
@@ -268,14 +306,14 @@ classdef TemperatureDataSound
 	            chbT{i} = uicontrol('Parent',f,'Style','checkbox','Units','Normalized',...
 	        		'Position',[0.31+(i-1)*0.09 0.92 0.07 0.05],...
 	        		'String',num2str(obj.T(i)),'Value', 0, 'tag','chbT','backgroundcolor',...
-	        		T_colors(i))
+	        		T_colors(i));
    			end
    			chbT{1}.Value = 1;
             
             chbT_All = uicontrol('Parent',f,'Style','checkbox','Units','Normalized',...
         		'Position',[chbT{length(obj.T)}.Position(1)+0.1 0.92 0.07 0.05],...
         		'String','All','Value', 0, 'tag','chbT_All',...
-        		'callback',@(src,evt)CheckSetTemp_All(src,evt))
+        		'callback',@(src,evt)CheckSetTemp_All(src,evt));
 
         	ppmGraph = uicontrol('Parent',f,'Style','popupmenu','Units','Normalized',...
         		'Position',[0.8 0.82 0.2 0.07],'tag','ppmGraph',...
@@ -284,11 +322,11 @@ classdef TemperatureDataSound
             chbColumn1 = uicontrol('Parent',f,'Style','checkbox','Units','Normalized',...
         		'Position',[0.85 0.72 0.07 0.05],...
         		'String','1','Value', 1, ...
-        		'tag','chbColumn1','backgroundcolor','b')
+        		'tag','chbColumn1','backgroundcolor','b');
     		chbColumn2 = uicontrol('Parent',f,'Style','checkbox','Units','Normalized',...
         		'Position',[0.93 0.72 0.07 0.05],...
         		'String','2','Value', 1, ...
-        		'tag','chbColumn2','backgroundcolor','r') 
+        		'tag','chbColumn2','backgroundcolor','r');
         	uicontrol('Parent',f,'Style','checkbox','Units','Normalized',...
         		'Position',[0.8 0.6 0.2 0.05],'callback',@(src,evt)CheckFFT_Func(src,evt),...
         		'String','FFT','Value', 0, ...
@@ -407,7 +445,7 @@ classdef TemperatureDataSound
 	                [xx, yy] = InterpFreq(obj, temper(i), numA);
 	                fq = obj.data.(curT).(curA).R_fft_data(:,1);
 	                A = obj.data.(curT).(curA).R_fft_data(:,2);
-	                plot(xx, yy,[T_colors(i),'.'])
+	                plot(xx, yy,[T_colors(temper(i)),'.'])
 % 	            	plot(fq,A,'ob','Parent',hAx);
 	                % find resonance 1 parameters
 	                if obj.data.(curT).(curA).Frequency(1) ~= 0
@@ -419,7 +457,7 @@ classdef TemperatureDataSound
 	                	fr1_ind = diap(1) + fr1_ind + 1;
 	                	Q1 = obj.data.(curT).(curA).QFactor(1);
 
-	                	plot(xx(fr1_ind),yy(fr1_ind),[T_colors(i),'v'],'MarkerSize',10);
+	                	plot(xx(fr1_ind),yy(fr1_ind),[T_colors(temper(i)),'v'],'MarkerSize',10);
 	                	text(xx(fr1_ind)+0.05,yy(fr1_ind)+0.0002,['F1 = ',num2str(F1)]);
 	                	text(xx(fr1_ind)+0.15,yy(fr1_ind)*0.707,['Q1 = ',num2str(Q1)]);
 	                end
@@ -433,7 +471,7 @@ classdef TemperatureDataSound
 	                	fr2_ind = diap(1) + fr2_ind + 1;
 	                	Q2 = obj.data.(curT).(curA).QFactor(2);
 
-	                	plot(xx(fr2_ind),yy(fr2_ind),[T_colors(i),'v'],'MarkerSize',10);
+	                	plot(xx(fr2_ind),yy(fr2_ind),[T_colors(temper(i)),'v'],'MarkerSize',10);
 	                	text(xx(fr2_ind)+0.05,yy(fr2_ind)+0.0002,['F2 = ',num2str(F2)]);
 	                	text(xx(fr2_ind)+0.15,yy(fr2_ind)*0.707,['Q2 = ',num2str(Q2)]);
 	                end   
