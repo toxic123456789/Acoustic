@@ -13,7 +13,7 @@ classdef ResonatorAcousticData
 		ln = 0;
 		Fs = 0;
 		step = 0.0001;
-		FreqDiap = [2000 4000];
+		FreqDiap = [4000 5000];
 		AngleStep = 9; % degree 
 	end
 
@@ -58,9 +58,10 @@ classdef ResonatorAcousticData
 			% Initialisation
 			step = obj.step;
 			FreqDiap = obj.FreqDiap;
-
+            
 			% Find resonance frequency
-			[A, fq] = fft_prc(Sound(Time_offset+50:end),Fs,0);
+			[A, fq] = fft_prc(Sound,Fs,0);
+
 			ResData.Discr = fq(2) - fq(1);
 		    [v, d1] = min(abs(fq-FreqDiap(1)));
 		    [v, d2] = min(abs(fq-FreqDiap(2)));
@@ -74,7 +75,7 @@ classdef ResonatorAcousticData
 		    yy = interp1(fq(dd(1):dd(2)),A(dd(1):dd(2)),xx,'spline');
 
 			% find FIRST and SECOND resonance frequencies:
-			[ra_all, ri_all] = findpeaks(yy,'MinPeakDistance',0.1,'MinPeakHeight',0.0005);
+			[ra_all, ri_all] = findpeaks(yy,'MinPeakDistance',0.1);
 			arr = sortrows([ra_all', ri_all']);
 			ra_all = arr(:,1);
 			rf_all = arr(:,2); clear arr;

@@ -15,6 +15,7 @@ classdef TemperatureDataSound
 					return;
 				end
 				[temprVect,angleArr,nameArr] = ScanNormList(obj,normList);
+                obj.T = temprVect;
 				% Sort data by temperature and angle 
 				for i = 1:length(temprVect)
 					T_str = ['T',num2str(temprVect(i))];
@@ -27,9 +28,9 @@ classdef TemperatureDataSound
                     end
                     obj.data.(T_str).angles = angleArr{i};
                     obj.data.(T_str).names = nameArr{i};
-                    obj.data.(T_str) = obj.SortData(obj,i);
+                    obj = obj.SortData(i);
+                    length(obj.getData('Frequency',1))
                 end
-                obj.T = temprVect;
                 obj.path = adr;
 %                 obj.dF = obj.GetStat('mean','Frequency',2)-obj.GetStat('mean','Frequency',1);
 %                 obj.dQ = obj.GetStat('max','QFactor',1)-obj.GetStat('min','QFactor',1);
@@ -170,7 +171,7 @@ classdef TemperatureDataSound
 		end
 
 
-		function data = getData(obj,name,temperature,column);
+		function data = getData(obj,name,temperature,column)
 			% function data = getData(obj,name,temperature,column)
 			% function collect data for definite parameter from definite temperatures
 			% Temperature can be a vector not only one single nuber 
@@ -181,7 +182,7 @@ classdef TemperatureDataSound
 				name = 'Frequency';
 			end
 			if nargin < 3
-				temperature = obj.T;
+				temperature = 1:length(obj.T);
 			end
 			if nargin < 4
 				column = 1;
@@ -189,7 +190,7 @@ classdef TemperatureDataSound
 
 			data = [];
 			for i = 1:length(temperature)
-				curT = ['T',num2str(temperature(i))];
+				curT = getF(obj,'T',temperature(i));
 				angles = obj.data.(curT).angles;
 				for j = 1:length(angles)
 					curA = ['A',num2str(angles(j)*60)];
@@ -198,10 +199,10 @@ classdef TemperatureDataSound
 				end
 			end
 
-		end
+        end
 
-
-		function data = SortData(obj,t_num)
+        
+		function obj = SortData(obj,t_num)
 			% function data = SortData(obj,t_num) 
 			% sorting frequency,amplitude and Qfactor data
 			% after loading and processing sound data
@@ -209,38 +210,85 @@ classdef TemperatureDataSound
 			% such as before but with sorting data by two resonanse
 			% frequencies 
 
-			Frequency(:,1) = obj.getData('Frequency',obj.T(t_num),1);
-			Frequency(:,2) = obj.getData('Frequency',obj.T(t_num),2);
-			Amplitude(:,1) = obj.getData('Amplitude',obj.T(t_num),1);
-			Amplitude(:,2) = obj.getData('Amplitude',obj.T(t_num),2);
+			Frequency(:,1) = obj.getData('Frequency',t_num,1);
+			Frequency(:,2) = obj.getData('Frequency',t_num,2);
+			Amplitude(:,1) = obj.getData('Amplitude',t_num,1);
+			Amplitude(:,2) = obj.getData('Amplitude',t_num,2);
+			QFactor(:,1) = obj.getData('QFactor',t_num,1);
+			QFactor(:,2) = obj.getData('QFactor',t_num,2);
+
+			%====== Processing by 1-st amplitude =======================
+
+			% precision of frequency estimate
+			prc = 0.2;
 
 			% find idexes of the normal amplitudes, that not less than 1/2 of the maximum
 			all_ind_vect = 1:length(Frequency(:,1));
 			MaxA = max(Amplitude);
 			trust_ind_1 = find(Amplitude(:,1) > MaxA(1)/2);
-			trust_ind_2 = find(Amplitude(:,2) > MaxA(2)/2);
+			
 			% find indexes of the unnormal (very low) amplitudes
 			A_distruct_ind_1 = all_ind_vect;
-			A_distruct_ind_2 = all_ind_vect;
 			A_distruct_ind_1(trust_ind_1) = [];
-			A_distruct_ind_2(trust_ind_2) = [];
 
 			% find mean frequencies by trust indexes
 			meanFq_1 = mean(Frequency(trust_ind_1,1));
-			meanFq_2 = mean(Frequency(trust_ind_2,2));
 
 			% find distruct indexes
-			distruct_ind_1 = find(abs(Frequency(:,1)-meanFq_1)>0.1);  
-			distruct_ind_2 = find(abs(Frequency(:,2)-meanFq_2)>0.1);  
+			distruct_ind_1 = find(abs(Frequency(:,1)-meanFq_1)>prc);  
+
 			% check distruct indexes by amplitudes
 			distruct_ind_1(setdiff(distruct_ind_1, A_distruct_ind_1)) = [];
-			distruct_ind_2(setdiff(distruct_ind_2, A_distruct_ind_2)) = [];
 
+			% move all negative results in second column
+			for i = 1:length(distruct_ind_1)
+				ind = distruct_ind_1(i);
+                if abs(Frequency(ind,1)-meanFq_1)>prc && abs(Frequency(ind,2)-meanFq_1)<0.1
+                	% replace first column with second
+                	buff_F = Frequency(ind,:);
+                	buff_A = Amplitude(ind,:);
+                	buff_Q = QFactor(ind,:);
+                	Frequency(ind,1) = buff_F(2);
+                	Frequency(ind,2) = buff_F(1);
+                	Amplitude(ind,1) = buff_A(2);
+                	Amplitude(ind,2) = buff_A(1);
+                	QFactor(ind,1) = buff_Q(2);
+                	QFactor(ind,2) = buff_Q(1);
+                else
+                	% zeroing first column
+                	Frequency(ind,1) = 0;
+                	Amplitude(ind,1) = 0;
+                	QFactor(ind,1) = 0;
+                end
+			end
+
+			%======= Processing by 2-d amplitude ====================
 			
+			trust_ind_2 = find(Amplitude(:,2) > MaxA(2)/2);
+			A_distruct_ind_2 = all_ind_vect;
+			A_distruct_ind_2(trust_ind_2) = [];
+			meanFq_2 = mean(Frequency(trust_ind_2,2));
+			distruct_ind_2 = find(abs(Frequency(:,2)-meanFq_2)>0.1);  
+			distruct_ind_2(setdiff(distruct_ind_2, A_distruct_ind_2)) = [];
+			for i = 1:length(distruct_ind_2)
+				ind = distruct_ind_2(i);
+				if abs(Frequency(ind,2)-meanFq_2)>prc
+                	% zeroing second column
+                	Frequency(ind,2) = 0;
+                	Amplitude(ind,2) = 0;
+                	QFactor(ind,2) = 0;
+				end
+			end
 
+			%  ======== Save sorted data in structure =============
+			curT = getF(obj,'T',t_num);
+			for i = 1:length(Amplitude)
+				curA = getF(obj,'A',i,t_num);
+				obj.data.(curT).(curA).Frequency = Frequency(i,:);
+				obj.data.(curT).(curA).Amplitude = Amplitude(i,:);
+				obj.data.(curT).(curA).QFactor = QFactor(i,:);
+			end
 		end
-
-
 
 		
 		function [xx, yy] = InterpFreq(obj,temperature,angleN,bplot)
@@ -297,7 +345,7 @@ classdef TemperatureDataSound
         	T_colors = ['b','g','r','c','m','k','y'];
 
         	axs = axes('Parent',f,'Units','Normalized','Position',[0.1 0.1 0.7 0.8]);
-        	plot(obj.getData('Frequency',obj.T(1),1)); grid;
+        	plot(obj.getData('Frequency',1,1)); grid;
             
    			uicontrol('Parent',f,'Style','text','tag','txtTemper','Units','Normalized',...
         		'Position',[0.1 0.92 0.2 0.05],'fontsize',12,'String','Temperture:',...
@@ -306,7 +354,7 @@ classdef TemperatureDataSound
 	            chbT{i} = uicontrol('Parent',f,'Style','checkbox','Units','Normalized',...
 	        		'Position',[0.31+(i-1)*0.09 0.92 0.07 0.05],...
 	        		'String',num2str(obj.T(i)),'Value', 0, 'tag','chbT','backgroundcolor',...
-	        		T_colors(i));
+	        		T_colors(i),'callback',@(src,evt)ChbTemp_Func(src,evt));
    			end
    			chbT{1}.Value = 1;
             
@@ -320,13 +368,13 @@ classdef TemperatureDataSound
         		'String',{'Frequency','QFactor','Amplitude'},...
         		'tag','lstName','backgroundcolor','r','callback',@(src,evt)PopupList_Func(src,evt));
             chbColumn1 = uicontrol('Parent',f,'Style','checkbox','Units','Normalized',...
-        		'Position',[0.85 0.72 0.07 0.05],...
-        		'String','1','Value', 1, ...
-        		'tag','chbColumn1','backgroundcolor','b');
+        		'Position',[0.80 0.72 0.09 0.05],...
+        		'String','1(o)','Value', 1, 'callback',@(src,evt)ChbTemp_Func(src,evt), ...
+        		'tag','chbColumn1','fontsize',13);
     		chbColumn2 = uicontrol('Parent',f,'Style','checkbox','Units','Normalized',...
-        		'Position',[0.93 0.72 0.07 0.05],...
-        		'String','2','Value', 1, ...
-        		'tag','chbColumn2','backgroundcolor','r');
+        		'Position',[0.89 0.72 0.09 0.05],...
+        		'String','2(*)','Value', 1, 'callback',@(src,evt)ChbTemp_Func(src,evt), ...
+        		'tag','chbColumn2','fontsize',13);
         	uicontrol('Parent',f,'Style','checkbox','Units','Normalized',...
         		'Position',[0.8 0.6 0.2 0.05],'callback',@(src,evt)CheckFFT_Func(src,evt),...
         		'String','FFT','Value', 0, ...
@@ -360,10 +408,17 @@ classdef TemperatureDataSound
                 cla(axs);
                 p = PlotCurrentFft(axs);
             end
+
             
             function PopupList_Func(src,evt)
                 p = PlotCurrentPar(axs);
             end
+
+
+            function ChbTemp_Func(src,evt)
+                p = PlotCurrentPar(axs);
+            end
+
 
             function CheckFFT_Func(src,evt)
                 Value = get(src,'Value');
@@ -385,6 +440,7 @@ classdef TemperatureDataSound
 		        	set(axs,'GridAlpha',1,'XGrid','on','YGrid','on'); 
 		        end
             end
+
             function CheckSetTemp_All(src,evt)
             	if chbT_All.Value == 0 
             		for i = 1:length(chbT)
@@ -395,6 +451,7 @@ classdef TemperatureDataSound
                         chbT{i}.Value = 1;
                     end
 		        end
+		        p = PlotCurrentPar(axs);
             end
 
 			% Plot functions             
@@ -409,7 +466,7 @@ classdef TemperatureDataSound
             		temper(i) = chbT{i}.Value;
                 end
                 curColors = T_colors(find(temper));
-            	temper = obj.T(find(temper));
+            	temper = find(temper);
             	if isempty(temper)
             		return;
             	end
@@ -424,11 +481,12 @@ classdef TemperatureDataSound
 		            	elseif columns(i) == 2
 		            		color_plot = ['--*',curColors(j)];
 		            	end
-		            	p = plot(obj.data.(['T',num2str(temper(j))]).angles,...
+		            	p = plot(obj.data.(obj.getF('T',temper(j))).angles(ind),...
                             s(ind,j),color_plot,'linewidth',1.5,'Parent',hAx);  
             		end
 	            end
             end
+
 
             function p = PlotCurrentFft(hAx)
             	p = [];
@@ -478,6 +536,7 @@ classdef TemperatureDataSound
 
                 end
             end
+
 
             function v = getTchb()
             	% function v = getTchb() 
