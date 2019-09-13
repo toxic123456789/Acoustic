@@ -19,7 +19,7 @@ classdef ResonatorAcousticData
 
 
 	methods
-		function obj = ResonatorAcousticData(adr)
+		function obj = ResonatorAcousticData(adr,diap)
 			% Open, recognize and processing data
 			% ===================================
 			if nargin < 1
@@ -28,6 +28,9 @@ classdef ResonatorAcousticData
 				if n == 0
 					return;
 				end
+            end
+            if nargin > 1
+            	obj.FreqDiap = diap;
             end
             Time_offset = 1000;
 			[M Fs] = audioread(adr);
