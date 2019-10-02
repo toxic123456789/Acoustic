@@ -14,7 +14,7 @@ classdef ResonatorAcousticData
 		Fs = 0;
 		step = 0.0001;
 		FreqDiap = [4000 5000];
-		AngleStep = 9; % degree 
+		AngleStep = 9; % degree
 	end
 
 
@@ -32,6 +32,9 @@ classdef ResonatorAcousticData
             if nargin > 1
             	obj.FreqDiap = diap;
             end
+
+			% % % % % % % % % % % %
+            
             Time_offset = 1000;
 			[M Fs] = audioread(adr);
 			% % % % % % % % % % % %
@@ -50,7 +53,6 @@ classdef ResonatorAcousticData
 			obj.DecreaseFit = SoundData.DecreaseFit;
 			obj.DecreaseTime(1) = SoundData.DecreaseTime;
 			% % % % % % % % % % % %
-			obj = SortData(obj);
             obj = AlignFreqDiap(obj,1);
 		end
 
@@ -72,7 +74,7 @@ classdef ResonatorAcousticData
 		    % find ONE resonanse frequency:
 		    ri_1 = d1+ri_1+1; % convert to absolute index
 		    % set diapason for interpolate:
-		    dd = [floor(ri_1-10/ResData.Discr) floor(ri_1+10/ResData.Discr)];
+		    dd = [d1 d2];
 		    % interpolation data
 		    xx = fq(dd(1)):step:fq(dd(2));
 		    yy = interp1(fq(dd(1):dd(2)),A(dd(1):dd(2)),xx,'spline');
@@ -110,7 +112,7 @@ classdef ResonatorAcousticData
 
 			% Initialisation
 			if nargin < 2
-				i_off = 6000
+				i_off = 6000;
 			end
 			Fs = obj.Fs; 
 			step = obj.step;
@@ -118,6 +120,10 @@ classdef ResonatorAcousticData
             fq = Data.R_fft_data(:,1);
             A = Data.R_fft_data(:,2);
             ri_1 = Data.ri_1;
+            if isempty(ri_1)
+                disp(['Not find 1st ind QFactor in ',obj.path])
+                return
+            end
             ri_2 = Data.ri_2;
             
 		    % interpolation data
@@ -126,49 +132,39 @@ classdef ResonatorAcousticData
 
 			% get QFactor 1
 		    v_v = 0.707 * Data.Amplitude(1);
-		    [v, ind_1] = min( abs(yy(ri_1-i_off:ri_1) - v_v)  );
-		    [v, ind_2] = min( abs(yy(ri_1:ri_1+i_off) - v_v)  );
-		    ind_1 = ri_1 - (i_off - ind_1) -1;
-		    ind_2 = ri_1 + (ind_2) -1;
+            if i_off+ri_1 >= length(yy) || i_off>ri_1
+                min_m = 1;
+                max_m = length(yy);
+            else
+                min_m = ri_1 - i_off;
+                max_m = ri_1 + i_off;
+            end
+		    [v, ind_1] = min(abs(yy(min_m:ri_1)-v_v));
+		    [v, ind_2] = min(abs(yy(ri_1:max_m)-v_v));
+            
+            if i_off+ri_1 >= length(yy) || i_off>ri_1
+                ind_2 = ind_2+ri_1-1;
+            else
+                ind_1 = ri_1 - (i_off - ind_1) -1;
+                ind_2 = ri_1 + (ind_2) -1;
+            end
+            
 		    QFactor(1) = Data.Frequency(1)/(xx(ind_2)-xx(ind_1));
 		    %  get QFactor 2
 			if Data.Frequency(2) ~= 0
-			    v_v = 0.707 * Data.Amplitude(2);
-			    [v, ind_3] = min( abs(yy(ri_2-i_off:ri_2) - v_v)  );
-			    [v, ind_4] = min( abs(yy(ri_2:ri_2+i_off) - v_v)  );
-			    ind_3 = ri_2 - (i_off - ind_3) -1;
-			    ind_4 = ri_2 + (ind_4) -1;
-			    QFactor(2) = Data.Frequency(2)/(xx(ind_4)-xx(ind_3));
+                try
+                    v_v = 0.707 * Data.Amplitude(2);
+                    [v, ind_3] = min( abs(yy(ri_2-i_off:ri_2) - v_v)  );
+                    [v, ind_4] = min( abs(yy(ri_2:ri_2+i_off) - v_v)  );
+                    ind_3 = ri_2 - (i_off - ind_3) -1;
+                    ind_4 = ri_2 + (ind_4) -1;
+                    QFactor(2) = Data.Frequency(2)/(xx(ind_4)-xx(ind_3));
+                catch
+                    QFactor(2) = 0;
+                    disp(['Not find 2d QFactor in ',obj.path])
+                end
 			else
 				QFactor(2) = 0;
-			end
-		end
-
-
-		function obj = SortData(obj)
-			% obj = SortData(obj)
-			% function distribute values between two resonanses
-
-			ind = find(obj.Frequency(:,2)==0);
-			Fq = obj.Frequency;
-			Fq(ind,:)=[];
-			mFq = mean(Fq);
-			Q = obj.QFactor;
-			Q(ind,:)=[];
-
-			for i = 1:length(ind)
-			    if abs(obj.Frequency(ind(i),1)-mFq(1)) > abs(obj.Frequency(ind(i),1)-mFq(2))
-			        obj.Frequency(ind(i),2) = obj.Frequency(ind(i),1);
-			        obj.Amplitude(ind(i),2) = obj.Amplitude(ind(i),1);
-			        obj.Frequency(ind(i),1) = 0;
-			        obj.Amplitude(ind(i),1) = 0;
-			        obj.QFactor(ind(i),2) = obj.QFactor(ind(i),1);
-			        obj.QFactor(ind(i),1) = 0; 
-			    else
-			        obj.Frequency(ind(i),2) = 0;
-			        obj.Amplitude(ind(i),2) = 0;
-			        obj.QFactor(ind(i),2)= 0;
-			    end
 			end
 		end
 
@@ -254,6 +250,9 @@ classdef ResonatorAcousticData
 		    % find peaks values from Sound
 		    pt_begin = max_ind + offset_time; 
 		    pt_end = floor(pt_begin + floor(sound_time*Fs));
+            if pt_end > length(Sound)
+                pt_end = length(Sound)
+            end
 		    peaks_time = pt_begin : pt_end;
 		    [peaks_val, peaks_ind] = findpeaks(abs(Sound(peaks_time)),...
 		    Time(peaks_time),'MinPeakDistance',MinPeakDist);

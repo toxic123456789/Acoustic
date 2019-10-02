@@ -81,17 +81,17 @@ classdef TemperatureDataSound
 
 
             txt_save = uicontrol('Parent',F,'Style','text','Units','Normalized',...
-                'Position',[0.03 0.241+0.19 0.65 0.07],...
-                'String', 'Save data to variable name:', 'tag','txt_save');
+                'Position',[0.03 0.241+0.19 0.6 0.07],...
+                'String', 'Save data to variable name:', 'tag','txt_save',...
+                'HorizontalAlignment','left');
 
             edt_save = uicontrol('Parent',F,'Style','edit','Units','Normalized',...
-                'Position',[0.6 0.25+0.19 0.3 0.065],...
+                'Position',[0.5 0.25+0.19 0.5 0.065],...
                 'String', 'a', 'tag','edt_save');
 
             btn_load = uicontrol('Parent',F,'Style','pushbutton','Units','Normalized',...
         		'Position',[0.25 0.05+0.26 0.5 0.1],'callback',@btn_load_all,...
         		'String','Load','tag','btn_load','fontsize',13,'fontweight','bold');
-
 
             txt_file = uicontrol('Parent',F,'Style','text','Units','Normalized',...
                 'Position',[0.1 0.25 0.65 0.05],'HorizontalAlignment','left',...
@@ -104,6 +104,8 @@ classdef TemperatureDataSound
             c = uicontextmenu;
             lst_file.UIContextMenu = c;
             uimenu(c,'Label','PlotByList','Callback',@(src,evt)menuBrowser(src,evt));
+            uimenu(c,'Label','Protocol','Callback',@(src,evt)menuBrowser(src,evt));
+            uimenu(c,'Label','Plot_TK4','Callback',@(src,evt)menuBrowser(src,evt));
             refresh_listbox();
 
             % Set ParData
@@ -112,6 +114,59 @@ classdef TemperatureDataSound
             
             ppm_diap.String = ParData.f_diapason_str;
             edt_diap.String = ParData.f_diapason_str{1}; 
+
+
+            function btn_load_all(src,evt)
+	        	% Load data acoustic files with set parameters
+
+	        	% Get current parameters
+	        	ParData = get_ParData_fromUI(src,evt);
+
+	        	% Save parameters
+                Save_Par_Data(ParData);
+
+                % Load data from path
+                path = ParData.pathes{1};
+                diap = ParData.f_diapason(1,:);
+                if path(end)~='\'; path(end+1)='\'; end
+
+               	% get data file list
+				[format, normList] = getFileList(obj, path);
+				if ~strcmp(format,'norm')
+					errordlg('unsupported format','unsupported format');
+					return;
+				end
+				[temprVect,angleArr,nameArr] = ScanNormList(obj,normList);
+                obj.T = temprVect;
+                obj.path = path;
+                w_ln = length(normList);
+                % Sort data by temperature and angle 
+                f_w = waitbar(0,'Please wait...');
+                counter = 0;
+                for i = 1:length(temprVect)
+	                T_str = obj.getF('T',i);
+                    obj.data.(T_str).angles = angleArr{i};
+                    obj.data.(T_str).names = nameArr{i};
+                    for j = 1:length(nameArr{i})
+                        % name of angle consist of symbol A and angle in
+                        % minutes
+                        counter = counter + 1;
+                        waitbar( counter/w_ln, f_w,...
+                            ['file ',nameArr{i}{j},' processing ...']);
+                        A_str = obj.getF('A',j,i);
+                        obj.data.(T_str).(A_str) = [];
+                        obj.data.(T_str).(A_str) = ResonatorAcousticData([path,nameArr{i}{j}],diap);
+                    end
+                    obj.data.(T_str).meanFq_1 = [];
+                    obj.data.(T_str).meanFq_2 = [];
+                    obj = obj.SortData(i);
+                end
+                close(f_w);
+                % save results in variable
+                assignin('base', edt_save.String, obj);
+                refresh_listbox(src,evt);
+	        end
+            
             
             function refresh_listbox(src,evt)
                 vars = evalin('base','whos');
@@ -135,13 +190,17 @@ classdef TemperatureDataSound
                 catch
                     str = evt.Source.Label;
                 end
+                nm = lst_file.String{lst_file.Value};
+                if strcmp(nm,'ans')
+                    errordlg('data is empty','data is empty');
+                	return;
+                end
                 if strcmp(str,'PlotByList')
-                    nm = lst_file.String{lst_file.Value};
-                    if ~strcmp(nm,'ans')
-                        evalin('base',[nm,'.PlotByList']); 
-                    else
-                        errordlg('data is empty','data is empty');
-                    end
+					evalin('base',[nm,'.PlotByList']); 
+                elseif strcmp(str,'Protocol')
+					evalin('base',[nm,'.getProtocol']); 
+				elseif strcmp(str,'Plot_TK4')
+					evalin('base',[nm,'.Get_TKF(1,1)']);
                 end
             end
 
@@ -221,12 +280,17 @@ classdef TemperatureDataSound
                 allStr(src.Value) = [];
                 allStr = [curStr; allStr];
                 src.String = allStr;
+                % refresh variable name
+                edt_save.String = scan_data_name(obj,edt_path.String,'variable');
             end
             
 
             function Enter_on_edit(src,evt)
                 drawnow;
                 if isequal(evt.Key,'return')
+                    color = src.BackgroundColor;
+                    src.BackgroundColor = 'g';
+                    pause(0.1);
 	                % get current sting 
                     curStr = (get(src,'String'));
 	            	% define popup sufix
@@ -243,7 +307,7 @@ classdef TemperatureDataSound
 					% sort data in the popupmenu 
 					allStr = [curStr; allStr];
 					src.Parent.findobj('tag',['ppm',sufix]).String = allStr;
-
+                    src.BackgroundColor = color;
                 end
             end
 
@@ -252,6 +316,9 @@ classdef TemperatureDataSound
             	% open file browser for get path to data files 
                 drawnow
             	path = uigetdir(src.Parent.findobj('tag','edt_path').String);
+                if path == 0
+                    return;
+                end
             	if exist(path)~=0
             		allStr = src.Parent.findobj('tag','ppm_path').String;
                     % find if exist equal string
@@ -264,6 +331,25 @@ classdef TemperatureDataSound
             		allStr = [path; allStr];
             		src.Parent.findobj('tag','ppm_path').String = allStr;
                     src.Parent.findobj('tag','edt_path').String = path;
+                    % set variable name
+                    try
+                        path_arr = split(obj.path,'\');
+                    catch
+                        path_arr = strsplit(obj.path,'\');
+                    end
+                    expr = '\d+_\d+_\d+_.+';
+                    file = '';
+                    for i = 1:length(path_arr)
+                        matchStr = regexp(path_arr{i},expr,'match');
+                        if ~isempty(matchStr)
+                            file = matchStr; file = file{1};
+                            break;
+                        else
+                            file = 'undefined';
+                        end
+                    end
+                    % refresh variable name in edit
+                    edt_save.String = scan_data_name(obj,edt_path.String,'variable');
             	else
             		errordlg('incorrect path','incorrect path');
             	end
@@ -287,6 +373,10 @@ classdef TemperatureDataSound
             		end
             		if ~isempty(apr_files)
             			src.Parent.findobj('tag','ppm_prew').String = apr_files;
+                        clr = src.Parent.findobj('tag','ppm_prew').BackgroundColor;
+                        src.Parent.findobj('tag','ppm_prew').BackgroundColor = 'g';
+                        pause(0.1);
+                        src.Parent.findobj('tag','ppm_prew').BackgroundColor = clr;
             		else
             			errordlg('not find apropriate files',...
             				'not find apropriate files');
@@ -326,55 +416,6 @@ classdef TemperatureDataSound
             end
         
 
-            function btn_load_all(src,evt)
-	        	% Load data acoustic files with set parameters
-
-	        	% Get current parameters
-	        	ParData = get_ParData_fromUI(src,evt);
-
-	        	% Save parameters
-                Save_Par_Data(ParData);
-
-                % Load data from path
-                path = ParData.pathes{1};
-                diap = ParData.f_diapason(1,:);
-                if path(end)~='\'; path(end+1)='\'; end
-
-               	% get data file list
-				[format, normList] = getFileList(obj, path);
-				if ~strcmp(format,'norm')
-					errordlg('unsupported format','unsupported format');
-					return;
-				end
-				[temprVect,angleArr,nameArr] = ScanNormList(obj,normList);
-                obj.T = temprVect;
-                w_ln = length(normList);
-                % Sort data by temperature and angle 
-                f_w = waitbar(0,'Please wait...');
-                for i = 1:length(temprVect)
-	                T_str = ['T',num2str(temprVect(i))];
-                    for j = 1:length(nameArr{i})
-                        % name of angle consist of symbol A and angle in
-                        % minutes
-                        ii = (i-1)*length(nameArr{i})+j;
-                        waitbar( ii/w_ln, f_w,...
-                            ['file ',nameArr{i}{j},' processing ...']);
-                        A_str = ['A',num2str(angleArr{i}(j)*60)];
-                        obj.data.(T_str).(A_str) = [];
-                        obj.data.(T_str).(A_str) = ResonatorAcousticData([path,nameArr{i}{j}],diap);
-                    end
-                    obj.data.(T_str).angles = angleArr{i};
-                    obj.data.(T_str).names = nameArr{i};
-                    obj = obj.SortData(i);
-                    obj.path = path;
-                end
-                close(f_w);
-                % save results in variable
-                assignin('base', edt_save.String, obj);
-                refresh_listbox(src,evt);
-	        end
-
-
             function Save_Par_Data(ParData)
             	% write parameters to the file
                	fid = fopen('parameters_set.txt','w');
@@ -392,12 +433,16 @@ classdef TemperatureDataSound
 
             function ParData = get_ParData_fromUI(src,evt)
             	% get all data from user interface
-                ppm_ui = src.Parent.findobj('tag','ppm_diap');
-                if length(ppm_ui)>1
-                    ppm_ui = ppm_ui(1);
+                ppm_ui1 = src.Parent.findobj('tag','ppm_diap');
+                if length(ppm_ui1)>1
+                    ppm_ui1 = ppm_ui1(1);
                 end
-            	ParData.f_diapason_str = ppm_ui.String;
-            	ParData.pathes = src.Parent.findobj('tag','ppm_path').String;
+                ppm_ui2 = src.Parent.findobj('tag','ppm_path');
+                if length(ppm_ui2)>1
+                    ppm_ui2 = ppm_ui2(1);
+                end
+            	ParData.f_diapason_str = ppm_ui1.String;
+            	ParData.pathes = ppm_ui2.String;
             	j = 0;
                 for i = 1:length(ParData.f_diapason_str)
                 	str = ParData.f_diapason_str{i};
@@ -431,8 +476,15 @@ classdef TemperatureDataSound
         end
 
 
-		function TKF = Get_TKF(obj,column,bplot)
-			TKF = [];
+		function [TKFa, TKF]= Get_TKF(obj,column,bplot)
+            % TKF = Get_TKF(obj,column,bplot)
+            % function get column number (first or second frequency) and 
+            % return two Termal Frequencies coefficients 
+            % first by approximation method, and second TKF by direct 
+            % calculation 
+
+            TKF  = [];
+			TKFa = [];
 			if nargin < 2
 				column = 1;
 			end
@@ -440,24 +492,28 @@ classdef TemperatureDataSound
 				bplot = 0;
 			end
 			T = obj.T;
+
 			for j = 1:length(T)
-    			curNm = ['d',num2str(T(j))];
-				mFq(j) = obj.D.(curNm).getStat('mean','Frequency',column);
+                mFq(j) = getStat(obj,'mean','Frequency',j,column);
 			end
-			TKF = (max(mFq)-min(mFq))/(max(T)-min(T));
-			if bplot ~= 0 
-				figure; hold on; 
-				plot(T,mFq,'o--b','linewidth',1.5);
-				set(gca,'XGrid','on','YGrid','on','GridAlpha',1);
-				fit_model = polyfit(T,mFq,1);
-				fit_data = polyval(fit_model,[T(1):0.1:T(end)]);
+            % TKF by direct calculation
+            TKF = (max(mFq)-min(mFq))/(max(T)-min(T));
+            % TKF by approximamtion 
+            fit_model = polyfit(T,mFq,1);
+            fit_data = polyval(fit_model,[T(1):0.1:T(end)]);
+            TKFa = fit_model(1);
+
+            
+            if bplot ~= 0 
+                figure; hold on; 
+                plot(T,mFq,'o--b','linewidth',1.5);
+                set(gca,'XGrid','on','YGrid','on','GridAlpha',1);
 				plot([T(1):0.1:T(end)],fit_data,'.r','linewidth',1.5);
 				text(mean(T)-5,mean(mFq)-0.1,['TK4 exp = ',num2str(TKF)]);
-				text(mean(T)-5,mean(mFq)-0.2,['TK4 fit = ',num2str(fit_model(1))]);
+				text(mean(T)-5,mean(mFq)-0.2,['TK4 fit = ',num2str(TKFa)]);
 				ylabel('Hz');
 				xlabel('Celsium degree')
 				legend({'experemental','fit'})
-                TKF = fit_model(1);
 			end
 		end
 
@@ -529,32 +585,45 @@ classdef TemperatureDataSound
 		end
 
 
-		function statValue = getStat(obj,stat,name,column)
+		function statValue = getStat(obj,stat,name,indT,column)
 			% statValue = getStat(obj,stat,name,column)
-
+            % Temp by index (1,2,3);
+            
 			% Initialise
 			if nargin < 2
 				stat = 'mean';
-			end
+            end
+            
 			if nargin < 3
 				name = 'Frequency';
-			end
-			if nargin < 4
-				column = [1,2];
-			end
-			
+            end
+            
+            if nargin < 4
+				indT = 1;
+            end
+            
+			if nargin < 5
+				column = 1;
+            end
+            
+            Tname = obj.getF('T',indT);
 			% get values
-			for i = 1:length(column)
-                data = obj.(name)(:,column(i));
-				ind{i} = find(data~=0);
-				if strcmp(stat,'mean')
-					statValue(i) = 	mean(data(ind{i}));
-				elseif strcmp(stat,'min')
-					statValue(i) = 	min(data(ind{i}));
-				elseif strcmp(stat,'max')
-					statValue(i) = 	max(data(ind{i}));
-				end
-			end
+            if strcmp(name,'Frequency')
+                data = obj.getData('Frequency',indT,column);
+            elseif strcmp(name,'Amplitude');
+                data = obj.getData('Amplitude',indT,column);
+            elseif strcmp(name,'QFactor');
+                data = obj.getData('QFactor',indT,column);
+            end
+			ind = find(data~=0);
+
+            if strcmp(stat,'mean')
+                statValue = mean(data(ind));
+            elseif strcmp(stat,'min')
+                statValue = min(data(ind));
+            elseif strcmp(stat,'max')
+                statValue = max(data(ind));
+            end
 
 		end
 
@@ -598,84 +667,115 @@ classdef TemperatureDataSound
 			% such as before but with sorting data by two resonanse
 			% frequencies 
 
-			Frequency(:,1) = obj.getData('Frequency',t_num,1);
+            Frequency(:,1) = obj.getData('Frequency',t_num,1);
 			Frequency(:,2) = obj.getData('Frequency',t_num,2);
 			Amplitude(:,1) = obj.getData('Amplitude',t_num,1);
 			Amplitude(:,2) = obj.getData('Amplitude',t_num,2);
 			QFactor(:,1) = obj.getData('QFactor',t_num,1);
 			QFactor(:,2) = obj.getData('QFactor',t_num,2);
 
-			%====== Processing by 1-st amplitude =======================
+			% ============= Sort data ===================
 
-			% precision of frequency estimate
-			prc = 0.2;
+			mFq = mean(mean(Frequency));
+			nA = Amplitude;%/mean(max(Amplitude));
 
-			% find idexes of the normal amplitudes, that not less than 1/2 of the maximum
-			all_ind_vect = 1:length(Frequency(:,1));
-			MaxA = max(Amplitude);
-			trust_ind_1 = find(Amplitude(:,1) > MaxA(1)/2);
-			
-			% find indexes of the unnormal (very low) amplitudes
-			A_distruct_ind_1 = all_ind_vect;
-			A_distruct_ind_1(trust_ind_1) = [];
-
-			% find mean frequencies by trust indexes
-			meanFq_1 = mean(Frequency(trust_ind_1,1));
-
-			% find distruct indexes
-			distruct_ind_1 = find(abs(Frequency(:,1)-meanFq_1)>prc);  
-
-			% check distruct indexes by amplitudes
-			distruct_ind_1(setdiff(distruct_ind_1, A_distruct_ind_1)) = [];
-
-			% move all negative results in second column
-			for i = 1:length(distruct_ind_1)
-				ind = distruct_ind_1(i);
-                if abs(Frequency(ind,1)-meanFq_1)>prc && abs(Frequency(ind,2)-meanFq_1)<0.1
-                	% replace first column with second
-                	buff_F = Frequency(ind,:);
-                	buff_A = Amplitude(ind,:);
-                	buff_Q = QFactor(ind,:);
-                	Frequency(ind,1) = buff_F(2);
-                	Frequency(ind,2) = buff_F(1);
-                	Amplitude(ind,1) = buff_A(2);
-                	Amplitude(ind,2) = buff_A(1);
-                	QFactor(ind,1) = buff_Q(2);
-                	QFactor(ind,2) = buff_Q(1);
-                else
-                	% zeroing first column
-                	Frequency(ind,1) = 0;
-                	Amplitude(ind,1) = 0;
-                	QFactor(ind,1) = 0;
+% 			figure(2); hold on; plot(Frequency(:,1)); plot(Frequency(:,2));
+			for i = 1:size(Frequency,1)
+			    temp1 = [Frequency(i,1) Amplitude(i,1) QFactor(i,1)];
+			    temp2 = [Frequency(i,2) Amplitude(i,2) QFactor(i,2)];
+			    
+			    if Frequency(i,1)>mFq && Frequency(i,2)<mFq
+			        buff = temp1; temp1 = temp2; temp2 = buff; % 1st = 2d, 2d = 1st
+			    elseif Frequency(i,1)<mFq && Frequency(i,2)<mFq
+			        if(nA(i,1) > nA(i,2))
+			            temp2 = [0,0,0];
+			        elseif (nA(i,1) < nA(i,2))
+			            temp1 = temp2; temp2 = [0,0,0]; % 1st = 2d, 2d = 0 
+			        end
+			    elseif Frequency(i,1)>mFq && Frequency(i,2)>mFq
+			        if(nA(i,1) > nA(i,2))
+			            temp2 = temp1; temp1 = [0,0,0]; % 2d = 1st, 2d = 0 
+			        elseif (nA(i,1) < nA(i,2))
+			            temp1 = [0,0,0];
+			        end
                 end
+                Frequency(i,:)=[temp1(1), temp2(1)];
+			    Amplitude(i,:)=[temp1(2), temp2(2)];
+			    QFactor(i,:)=[temp1(3), temp2(3)];
+			    temp1 = []; temp2 = []; buff = [];
+                
+% 			    cla;
+%               ind1 = find(Frequency(:,1)); ind2 = find(Frequency(:,2));
+% 			    plot(ind1, Frequency(ind1,1)); plot(ind2,Frequency(ind2,2));
+% 			    plot([i i], get(gca,'YLim'),'r:','linewidth',2);
+% 			    pause(0.1);
 			end
-
-			%======= Processing by 2-d amplitude ====================
-			
-			trust_ind_2 = find(Amplitude(:,2) > MaxA(2)/2);
-			A_distruct_ind_2 = all_ind_vect;
-			A_distruct_ind_2(trust_ind_2) = [];
-			meanFq_2 = mean(Frequency(trust_ind_2,2));
-			distruct_ind_2 = find(abs(Frequency(:,2)-meanFq_2)>0.1);  
-			distruct_ind_2(setdiff(distruct_ind_2, A_distruct_ind_2)) = [];
-			for i = 1:length(distruct_ind_2)
-				ind = distruct_ind_2(i);
-				if abs(Frequency(ind,2)-meanFq_2)>prc
-                	% zeroing second column
-                	Frequency(ind,2) = 0;
-                	Amplitude(ind,2) = 0;
-                	QFactor(ind,2) = 0;
-				end
-			end
-
+            ind1 = find(Frequency(:,1)); ind2 = find(Frequency(:,2));
 			%  ======== Save sorted data in structure =============
 			curT = getF(obj,'T',t_num);
-			for i = 1:length(Amplitude)
+			for i = 1:size(Amplitude,1)
 				curA = getF(obj,'A',i,t_num);
 				obj.data.(curT).(curA).Frequency = Frequency(i,:);
 				obj.data.(curT).(curA).Amplitude = Amplitude(i,:);
 				obj.data.(curT).(curA).QFactor = QFactor(i,:);
-			end
+            end
+            obj.data.(curT).meanFq_1 = mean(Frequency(ind1,1));
+            obj.data.(curT).meanFq_2 = mean(Frequency(ind2,2));
+
+            % ======== Reload empty frequencies ===================
+            ind1 = find(~Frequency(:,1)); ind2 = find(~Frequency(:,2));
+            maxA = max(max(Amplitude));
+            dopusk_amp = 0.01;
+            dopusk_frq = 0.05;
+            for i = 1:length(ind1)
+            	diap = [obj.data.(curT).meanFq_1-0.3 obj.data.(curT).meanFq_1+0.3];
+            	d = ResonatorAcousticData([obj.path,obj.data.(curT).names{ind1(i)}],diap);
+                [vv, ii] = max(d.Amplitude);
+                curA = getF(obj,'A',ind1(i),t_num);
+				obj.data.(curT).(curA).Frequency(1) = d.Frequency(ii);
+				obj.data.(curT).(curA).Amplitude(1) = d.Amplitude(ii);
+                obj.data.(curT).(curA).QFactor(1) = d.QFactor(ii);
+                if (d.Amplitude(ii)/maxA < dopusk_amp) || abs(d.Frequency(ii)-obj.data.(curT).meanFq_1) > dopusk_frq
+                    obj.data.(curT).(curA).QFactor(1) = 0;
+                    obj.data.(curT).(curA).Frequency(1) = 0;
+                    obj.data.(curT).(curA).Amplitude(1) = 0;
+                end
+            end
+            for i = 1:length(ind2)
+            	diap = [obj.data.(curT).meanFq_2-0.3 obj.data.(curT).meanFq_2+0.3];
+            	d = ResonatorAcousticData([obj.path,obj.data.(curT).names{ind2(i)}],diap);
+                [vv, ii] = max(d.Amplitude);
+                curA = getF(obj,'A',ind2(i),t_num);
+				obj.data.(curT).(curA).Frequency(2) = d.Frequency(ii);
+				obj.data.(curT).(curA).Amplitude(2) = d.Amplitude(ii);
+                if d.Amplitude(ii)/maxA < dopusk_amp || abs(d.Frequency(ii)-obj.data.(curT).meanFq_2) > dopusk_frq
+                    obj.data.(curT).(curA).QFactor(2) = 0;
+                    obj.data.(curT).(curA).Frequency(2) = 0;
+                    obj.data.(curT).(curA).Amplitude(2) = 0;
+                end
+            end
+            
+            % addition filter by mean frequency
+            for i = 1:length(Frequency(:,1))
+                curA = getF(obj,'A',i,t_num);
+                try
+                    meanFq_1 = obj.data.(curT).meanFq_1;
+                    meanFq_2 = obj.data.(curT).meanFq_2;
+                    if (obj.data.(curT).(curA).Amplitude(1)/maxA < dopusk_amp) || abs(obj.data.(curT).(curA).Frequency(1)-obj.data.(curT).meanFq_1) > dopusk_frq
+                        obj.data.(curT).(curA).QFactor(1) = 0;
+                        obj.data.(curT).(curA).Frequency(1) = 0;
+                        obj.data.(curT).(curA).Amplitude(1) = 0;
+                    end
+                    if (obj.data.(curT).(curA).Amplitude(2)/maxA < dopusk_amp) || abs(obj.data.(curT).(curA).Frequency(2)-obj.data.(curT).meanFq_2) > dopusk_frq
+                        obj.data.(curT).(curA).QFactor(2) = 0;
+                        obj.data.(curT).(curA).Frequency(2) = 0;
+                        obj.data.(curT).(curA).Amplitude(2) = 0;
+                    end
+                catch
+                    disp('Addition check crash');
+                end
+            end
+            
 		end
 
 		
@@ -779,6 +879,10 @@ classdef TemperatureDataSound
         		'Position',[0.81 0.46 0.118 0.05],'fontsize',12,'String','0','backgroundcolor','r',...
                 'fontweight','bold');
 
+          %   btn_prot = uicontrol('Parent',f,'Style','pushbutton','Units','Normalized',...
+        		% 'Position',[0.81 0.12 0.18 0.07],'callback',@btn_protocol,...
+        		% 'String','Get protocol','tag','btn_prot','fontsize',11,'fontweight','normal');
+            
 %         	cla(axs); 
 %         	hold on;
 %         	ind = find(obj.Frequency(:,1)~=0);
@@ -790,6 +894,7 @@ classdef TemperatureDataSound
         	% UI functions
         	%----------------------------------------------
 
+            
             function SliderFunc(src,evt)
                 num = round(get(sld,'Value'));
                 v = getTchb();
@@ -861,6 +966,7 @@ classdef TemperatureDataSound
             	end
             	columns = [chbColumn1.Value, chbColumn2.Value];
             	columns = find(columns~=0);
+                xlim_max = 0;
             	for i = 1:length(columns)
                     s = obj.getData(ppmGraph.String{ppmGraph.Value},temper,columns(i));
             		for j = 1:length(temper)
@@ -872,8 +978,14 @@ classdef TemperatureDataSound
 		            	end
 		            	p = plot(obj.data.(obj.getF('T',temper(j))).angles(ind),...
                             s(ind,j),color_plot,'linewidth',1.5,'Parent',hAx);  
-            		end
-	            end
+                        if (obj.data.(obj.getF('T',temper(j))).angles(end)) > xlim_max
+                            xlim_max = (obj.data.(obj.getF('T',temper(j))).angles(end));
+                        end
+                    end
+
+                end
+                if xlim_max == 0; xlim_max = 1; end;
+                set(gca,'XLim',[0 xlim_max]);
             end
 
 
@@ -885,14 +997,17 @@ classdef TemperatureDataSound
                 temper = getTchb();
                 % get angle number
                 numA = round(sld.Value);
+                hold on;
+                min_marg = obj.data.(getF(obj,'T',temper(1))).meanFq_1;
+                max_marg = obj.data.(getF(obj,'T',temper(1))).meanFq_2;
                 for i = 1:length(temper)
-                	hold on;
-                    curT = getF(obj,'T',i);
-                    curA = getF(obj,'A',i);
+                    try
+                    curT = getF(obj,'T',temper(i));
+                    curA = getF(obj,'A',numA,temper(i));
 	                [xx, yy] = InterpFreq(obj, temper(i), numA);
 	                fq = obj.data.(curT).(curA).R_fft_data(:,1);
 	                A = obj.data.(curT).(curA).R_fft_data(:,2);
-	                plot(xx, yy,[T_colors(temper(i)),'.'])
+	                plot(gca,xx, yy,[T_colors(temper(i)),'.'])
 % 	            	plot(fq,A,'ob','Parent',hAx);
 	                % find resonance 1 parameters
 	                if obj.data.(curT).(curA).Frequency(1) ~= 0
@@ -901,12 +1016,14 @@ classdef TemperatureDataSound
 	                	[v diap(1)] = min(abs(xx-(F1-0.02)));
 	                	[v diap(2)] = min(abs(xx-(F1+0.02)));
 	                	[fr1 fr1_ind] = min(abs(yy(diap(1):diap(2))-F1));
-	                	fr1_ind = diap(1) + fr1_ind + 1;
+ 	                	fr1_ind = diap(1) + fr1_ind + 1;
 	                	Q1 = obj.data.(curT).(curA).QFactor(1);
 
 	                	plot(xx(fr1_ind),yy(fr1_ind),[T_colors(temper(i)),'v'],'MarkerSize',10);
-	                	text(xx(fr1_ind)+0.05,yy(fr1_ind)+0.0002,['F1 = ',num2str(F1)]);
-	                	text(xx(fr1_ind)+0.15,yy(fr1_ind)*0.707,['Q1 = ',num2str(Q1)]);
+	                	text(xx(fr1_ind)+0.05,yy(fr1_ind)+yy(fr1_ind)*0.01,['F1 = ',num2str(F1)],...
+                            'Color',T_colors(temper(i)));
+	                	text(xx(fr1_ind)+0.15,yy(fr1_ind)*0.707,['Q1 = ',num2str(Q1)],...
+                            'Color',T_colors(temper(i)));
 	                end
 
 	                if obj.data.(curT).(curA).Frequency(2) ~= 0
@@ -919,11 +1036,23 @@ classdef TemperatureDataSound
 	                	Q2 = obj.data.(curT).(curA).QFactor(2);
 
 	                	plot(xx(fr2_ind),yy(fr2_ind),[T_colors(temper(i)),'v'],'MarkerSize',10);
-	                	text(xx(fr2_ind)+0.05,yy(fr2_ind)+0.0002,['F2 = ',num2str(F2)]);
-	                	text(xx(fr2_ind)+0.15,yy(fr2_ind)*0.707,['Q2 = ',num2str(Q2)]);
-	                end   
-
+	                	text(xx(fr2_ind)+0.05,yy(fr2_ind)+yy(fr2_ind)*0.01,['F2 = ',num2str(F2)],...
+                            'Color',T_colors(temper(i)));
+	                	text(xx(fr2_ind)+0.15,yy(fr2_ind)*0.707,['Q2 = ',num2str(Q2)],...
+                            'Color',T_colors(temper(i)));
+                    end
+                    if obj.data.(curT).meanFq_1 < min_marg
+                        min_marg = obj.data.(curT).meanFq_1;
+                    end
+                    if obj.data.(curT).meanFq_2 > min_marg
+                        max_marg = obj.data.(curT).meanFq_2;
+                    end
+                    set(gca,'XLim',[min_marg-3 max_marg+3]);
+                    end% try
                 end
+                
+                
+                
             end
 
 
@@ -977,5 +1106,158 @@ classdef TemperatureDataSound
             end
         end
 
+
+        function getProtocol(obj)
+        	
+			fid = fopen('Protocol.txt','w');
+
+			fprintf(fid,'\t\t\t Protocol N \n');
+			fprintf(fid,'\t\t\t Results of acoustic testing\n');
+
+			ln_str = '--------------------------------------------------------------';
+
+			fprintf(fid,'%s\n\n\n',ln_str);
+			fprintf(fid,'Data directory: %s\n',obj.path);
+			name = scan_data_name(obj,obj.path,'date');
+			fprintf(fid,'Testing date: %d  %d  %d \n',name(1),name(2),name(3));
+			a = clock;
+			date_str = [num2str(a(3)),'_',num2str(a(2)),'_',num2str(a(1))];
+			fprintf(fid,'Protocol date: %s\n',date_str);
+			time_str = [num2str(a(4)),'h_',num2str(a(5)),'m'];
+			fprintf(fid,'Protocol time: %s\n',time_str);
+			fprintf(fid,'%s\n',ln_str);
+			fprintf(fid,'Testing temperatures,testing angles: \n');
+			for i = 1:length(obj.T)
+                try
+				fprintf(fid,'t+%d C, angles: %2.2f : %2.2f : %2.2f \n',obj.T(i),...
+                    obj.data.(obj.getF('T',i)).angles(1),...
+                    abs(obj.data.(obj.getF('T',i)).angles(2)-obj.data.(obj.getF('T',i)).angles(1)),...
+                    obj.data.(obj.getF('T',i)).angles(end));
+                end
+            end
+            
+
+            fprintf(fid,'\n%s\n',ln_str);
+            fprintf(fid,'\t\t\t\t   Minimum values \n');
+            fprintf(fid,'\t\t [Fq1]     [Fq2]      [Am1]      [Am2]      [Q1]    [Q2]\n');
+            for i = 1:length(obj.T)
+                fprintf(fid,'t+%d\t\t%7.2f\t%7.2f\t%7.5f\t%7.5f\t%6.0f %6.0f \n',...
+                    obj.T(i), getStat(obj,'min','Frequency',i,1),...
+                    getStat(obj,'min','Frequency',i,2),...
+                    getStat(obj,'min','Amplitude',i,1),...
+                    getStat(obj,'min','Amplitude',i,2),...
+                    getStat(obj,'min','QFactor',i,1),...
+                    getStat(obj,'min','QFactor',i,2)...
+                    );
+            end    
+
+
+			fprintf(fid,'\n%s\n',ln_str);
+            fprintf(fid,'\t\t\t\t   Mean values \n');
+			fprintf(fid,'\t\t [Fq1]     [Fq2]      [dFq]      [Am2]      [Q1]    [Q2]\n');
+			for i = 1:length(obj.T)
+				fprintf(fid,'t+%d\t\t%7.2f\t%7.2f\t%7.5f\t%7.5f\t%6.0f %6.0f \n',...
+					obj.T(i), getStat(obj,'mean','Frequency',i,1),...
+					getStat(obj,'mean','Frequency',i,2),...
+					abs(getStat(obj,'mean','Frequency',i,2)-getStat(obj,'mean','Frequency',i,1)),...
+					getStat(obj,'mean','Amplitude',i,2),...
+					getStat(obj,'mean','QFactor',i,1),...
+					getStat(obj,'mean','QFactor',i,2)...
+					);
+            end
+
+            
+            fprintf(fid,'\n%s\n',ln_str);
+            fprintf(fid,'\t\t\t\t   Maximum values \n');
+            fprintf(fid,'\t\t [Fq1]     [Fq2]      [Am1]      [Am2]      [Q1]    [Q2]\n');
+            for i = 1:length(obj.T)
+                fprintf(fid,'t+%d\t\t%7.2f\t%7.2f\t%7.5f\t%7.5f\t%6.0f %6.0f \n',...
+                    obj.T(i), getStat(obj,'max','Frequency',i,1),...
+                    getStat(obj,'max','Frequency',i,2),...
+                    getStat(obj,'max','Amplitude',i,1),...
+                    getStat(obj,'max','Amplitude',i,2),...
+                    getStat(obj,'max','QFactor',i,1),...
+                    getStat(obj,'max','QFactor',i,2)...
+                    );
+            end           
+            
+            fprintf(fid,'\n%s\n',ln_str);
+
+            fprintf(fid,'\t\t\t   Termal frequency coefficient \n');
+            
+
+            [TK4a1, TK41]= obj.Get_TKF(1);
+            [TK4a2, TK42]= obj.Get_TKF(2);
+            fprintf(fid,'%s\n',ln_str);
+            fprintf(fid,'\t\t by first Fq \t\t\tby second Fq\n');
+            fprintf(fid,'%s\n',ln_str);
+            fprintf(fid,'k_aprox \t k_diff \t\t\t k_aprox \t k_diff \n');
+            fprintf(fid,'%5.5f \t %5.5f \t\t\t %5.5f \t %5.5f \n',TK4a1,TK41,TK4a2,TK42);
+ 			fprintf(fid,'%s\n',ln_str);
+
+
+
+			fclose(fid);
+			dos(['start wordpad "', 'Protocol.txt', '"']);
+            
+        end
+
+        function [name, date] = scan_data_name(obj,path,arg)
+            % get path to data files and return name for the protocol by default
+            % with second argument can return such variables:
+            % arp "protocol" - return name for protocol by default
+            % arg "date" - return data got from path
+            % arg "variable" - return name for variable
+
+            if nargin < 3
+                arg = 'protocol';
+            end
+
+            % find directory name in path
+            % ---------------------------
+            try
+                path_arr = split(path,'\');
+            catch
+                path_arr = strsplit(path,'\');
+            end
+            expr = '\d+_\d+_\d+_.+';
+            name = '';
+            for i = 1:length(path_arr)
+                matchStr = regexp(path_arr{i},expr,'match');
+                if ~isempty(matchStr)
+                    name = matchStr; name = name{1};
+                    break;
+                else
+                    name = 'undefined';
+                end
+            end
+            if strcmp(name,'undefined')
+                return;
+            end
+            % ---------------------------
+
+            % creating name by arg
+            if strcmp(arg,'protocol')
+            	name = [name,'.txt'];
+            elseif strcmp(arg,'date')
+                str_ind = findstr('_',name);
+                if length(str_ind) >= 3
+                    date(1) = str2num(name(1:str_ind(1)-1));
+                    date(2) = str2num(name(str_ind(1)+1:str_ind(2)-1));
+                    date(3) = str2num(name(str_ind(2)+1:str_ind(3)-1));
+                    name = date;
+                end
+            elseif strcmp(arg,'variable')
+	            name = strrep(name,'-','_');
+                name = ['v',name];
+            end
+        end
+
 	end % methods 
+
 end
+
+
+
+
+
