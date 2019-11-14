@@ -657,7 +657,13 @@ classdef TemperatureDataSound
 			end
 
         end
-
+        
+        function data = getDataT(obj,name,temperature)
+            data = [];
+            for i = 1:2
+                data = [data, getData(obj,'Frequency',temperature,i)];
+            end
+        end
         
 		function obj = SortData(obj,t_num)
 			% function data = SortData(obj,t_num) 
@@ -673,6 +679,14 @@ classdef TemperatureDataSound
 			Amplitude(:,2) = obj.getData('Amplitude',t_num,2);
 			QFactor(:,1) = obj.getData('QFactor',t_num,1);
 			QFactor(:,2) = obj.getData('QFactor',t_num,2);
+            
+            Frequency0 = Frequency;
+			Frequency0 = Frequency;
+			Amplitude0 = Amplitude;
+			Amplitude0 = Amplitude;
+			QFactor0 = QFactor;
+			QFactor0 = QFactor;            
+        
 
 			% ============= Sort data ===================
 
@@ -775,6 +789,101 @@ classdef TemperatureDataSound
                     disp('Addition check crash');
                 end
             end
+
+            % check for length array
+            
+            if  length(find(obj.getData('Frequency',t_num,1))) < length(obj.data.(['T',num2str(obj.T(t_num))]).angles)/2
+                disp('Enter to the additional sorting procedure')
+                nAmplitude = Amplitude0./max(max(Amplitude));
+                [sArr sInd] = sort(abs(nAmplitude(:,1)-nAmplitude(:,2)));
+                midleInd = 0;
+                for j = 1:length(sInd)
+                    if nAmplitude(sInd(j),1)>0.25
+                        midleInd = sInd(j);
+                    end
+                    if midleInd ~= 0 
+                        break
+                    end
+                end
+                if midleInd~=0
+                    % Set the support frequencies
+                    fq1 = Frequency0(midleInd,1);
+                    fq2 = Frequency0(midleInd,2);
+                    ind1 = find(nAmplitude(:,1)>0.1); ind11 = find(Frequency0(:,1)>0);
+                    ind2 = find(nAmplitude(:,2)>0.1); ind22 = find(Frequency0(:,2)>0);
+                    ind1 = intersect(ind1,ind11);
+                    ind2 = intersect(ind2,ind22);
+                    % concatenate two vectors
+                    Frequency1 = [Frequency0(ind1,1); Frequency0(ind2,2)];
+                    Amplitude1 = [Amplitude0(ind1,1); Amplitude0(ind2,2)];
+                    QFactor1 = [QFactor0(ind1,1); QFactor0(ind2,2)];
+                    Index = [ind1;ind2];
+                    if ~isempty(intersect(ind1,ind2))
+                        disp('!!!!!!!!!!!!!!!!!!!!!! the same index find')
+                    end
+                    % Sort new two freq and ampl vectors;
+                    ln = length(Frequency0(:,1));
+                    vFq1(1:ln) = 0; vFq2(1:ln) = 0;
+                    vAm1(1:ln) = 0; vAm2(1:ln) = 0;
+                    vQf1(1:ln) = 0; vQf2(1:ln) = 0;
+                    figure; hold on; plot(ind1,Frequency0(ind1,1),'o-'); plot(ind2,Frequency0(ind2,2),'o-');
+                    plot(get(gca,'XLim'),[fq1 fq1],'r--');
+                    plot(get(gca,'XLim'),[fq2 fq2],'r--');
+                    bb = plot([Index(1) Index(1)],get(gca,'YLim'),'b--');
+                    for i = 1:length(Index)
+%                         delete(bb);
+                        bb = plot([Index(i) Index(i)],get(gca,'YLim'),'b--');
+                        if abs(Frequency1(i)-fq1)<abs(Frequency1(i)-fq2)
+                            vFq1(Index(i)) = Frequency1(i);
+                            vAm1(Index(i)) = Amplitude1(i);
+                            vQf1(Index(i)) = QFactor1(i);
+                            plot(Index(i),vFq1(Index(i)),'bp');
+                        elseif abs(Frequency1(i)-fq2)<abs(Frequency1(i)-fq1)
+                            vFq2(Index(i)) = Frequency1(i);
+                            vAm2(Index(i)) = Amplitude1(i);
+                            vQf2(Index(i)) = QFactor1(i);
+                            plot(Index(i),vFq2(Index(i)),'r*');
+                        end
+                        
+                    end
+                    % find equ
+                    
+                    
+                    
+                    ind1 = find(vFq1>0);
+                    ind2 = find(vFq2>0);
+                    
+                    % zeroing previous results
+                    for i = 1:length(obj.data.(['T',num2str(obj.T(t_num))]).angles)
+                        curA = getF(obj,'A',i,t_num);
+                        obj.data.(curT).(curA).QFactor(1) = 0;
+                        obj.data.(curT).(curA).Frequency(1) = 0;
+                        obj.data.(curT).(curA).Amplitude(1) = 0;
+                        obj.data.(curT).(curA).QFactor(2) = 0;
+                        obj.data.(curT).(curA).Frequency(2) = 0;
+                        obj.data.(curT).(curA).Amplitude(2) = 0;
+                    end
+                    % processing & writing new results
+                    for i = 1:length(ind1)
+                        curA = getF(obj,'A',ind1(i),t_num);
+                        obj.data.(curT).(curA).Frequency(1) = vFq1(ind1(i));
+                        obj.data.(curT).(curA).Amplitude(1) = vAm1(ind1(i));
+                        obj.data.(curT).(curA).QFactor(1) = vQf1(ind1(i));
+                    end
+
+                    for i = 1:length(ind2)
+                        curA = getF(obj,'A',ind2(i),t_num);
+                        obj.data.(curT).(curA).Frequency(2) = vFq2(ind2(i));
+                        obj.data.(curT).(curA).Amplitude(2) = vAm2(ind2(i));
+                        obj.data.(curT).(curA).QFactor(2) = vQf2(ind2(i));
+                    end
+
+                else
+                    disp('Exit from additional sorting procedure/not found support freq');
+                end
+            end
+
+            
             
 		end
 
@@ -876,7 +985,10 @@ classdef TemperatureDataSound
         		'min',1,'max',obj.ln('A',1),'Value',1,'sliderstep',[1/obj.ln('A',1) 3/obj.ln('A',1)],...
         		'Enable','off');
         	txt = uicontrol('Parent',f,'Style','text','tag','sldValue','Units','Normalized',...
-        		'Position',[0.81 0.46 0.118 0.05],'fontsize',12,'String','0','backgroundcolor','r',...
+        		'Position',[0.81 0.50 0.118 0.05],'fontsize',12,'String','0','backgroundcolor','r',...
+                'fontweight','bold');
+            txtN = uicontrol('Parent',f,'Style','text','tag','sldNumber','Units','Normalized',...
+        		'Position',[0.81 0.43 0.118 0.05],'fontsize',12,'String','0','backgroundcolor','r',...
                 'fontweight','bold');
 
           %   btn_prot = uicontrol('Parent',f,'Style','pushbutton','Units','Normalized',...
@@ -898,7 +1010,8 @@ classdef TemperatureDataSound
             function SliderFunc(src,evt)
                 num = round(get(sld,'Value'));
                 v = getTchb();
-                txt.String = num2str(obj.data.(getF(obj,'T',v(1))).angles(num));
+                txt.String = [num2str(obj.data.(getF(obj,'T',v(1))).angles(num)),char(176)];
+                txtN.String = [char(35),num2str(num)];
                 cla(axs);
                 p = PlotCurrentFft(axs);
             end
@@ -1139,9 +1252,9 @@ classdef TemperatureDataSound
 
             fprintf(fid,'\n%s\n',ln_str);
             fprintf(fid,'\t\t\t\t   Minimum values \n');
-            fprintf(fid,'\t\t [Fq1]     [Fq2]      [Am1]      [Am2]      [Q1]    [Q2]\n');
+            fprintf(fid,'\t [Fq1]     [Fq2]      [Am1]      [Am2]      [Q1]    [Q2]\n');
             for i = 1:length(obj.T)
-                fprintf(fid,'t+%d\t\t%7.2f\t%7.2f\t%7.5f\t%7.5f\t%6.0f %6.0f \n',...
+                fprintf(fid,'t+%d\t%7.2f\t%7.2f\t%7.5f\t%7.5f\t%6.0f %6.0f \n',...
                     obj.T(i), getStat(obj,'min','Frequency',i,1),...
                     getStat(obj,'min','Frequency',i,2),...
                     getStat(obj,'min','Amplitude',i,1),...
@@ -1154,9 +1267,9 @@ classdef TemperatureDataSound
 
 			fprintf(fid,'\n%s\n',ln_str);
             fprintf(fid,'\t\t\t\t   Mean values \n');
-			fprintf(fid,'\t\t [Fq1]     [Fq2]      [dFq]      [Am2]      [Q1]    [Q2]\n');
+			fprintf(fid,'\t [Fq1]     [Fq2]      [dFq]      [Am2]      [Q1]    [Q2]\n');
 			for i = 1:length(obj.T)
-				fprintf(fid,'t+%d\t\t%7.2f\t%7.2f\t%7.5f\t%7.5f\t%6.0f %6.0f \n',...
+				fprintf(fid,'t+%d\t%7.2f\t%7.2f\t%7.5f\t%7.5f\t%6.0f %6.0f \n',...
 					obj.T(i), getStat(obj,'mean','Frequency',i,1),...
 					getStat(obj,'mean','Frequency',i,2),...
 					abs(getStat(obj,'mean','Frequency',i,2)-getStat(obj,'mean','Frequency',i,1)),...
@@ -1169,9 +1282,9 @@ classdef TemperatureDataSound
             
             fprintf(fid,'\n%s\n',ln_str);
             fprintf(fid,'\t\t\t\t   Maximum values \n');
-            fprintf(fid,'\t\t [Fq1]     [Fq2]      [Am1]      [Am2]      [Q1]    [Q2]\n');
+            fprintf(fid,'\t [Fq1]     [Fq2]      [Am1]      [Am2]      [Q1]    [Q2]\n');
             for i = 1:length(obj.T)
-                fprintf(fid,'t+%d\t\t%7.2f\t%7.2f\t%7.5f\t%7.5f\t%6.0f %6.0f \n',...
+                fprintf(fid,'t+%d\t%7.2f\t%7.2f\t%7.5f\t%7.5f\t%6.0f %6.0f \n',...
                     obj.T(i), getStat(obj,'max','Frequency',i,1),...
                     getStat(obj,'max','Frequency',i,2),...
                     getStat(obj,'max','Amplitude',i,1),...
@@ -1189,9 +1302,9 @@ classdef TemperatureDataSound
             [TK4a1, TK41]= obj.Get_TKF(1);
             [TK4a2, TK42]= obj.Get_TKF(2);
             fprintf(fid,'%s\n',ln_str);
-            fprintf(fid,'\t\t by first Fq \t\t\tby second Fq\n');
+            fprintf(fid,'\t by first Fq \t\t\tby second Fq\n');
             fprintf(fid,'%s\n',ln_str);
-            fprintf(fid,'k_aprox \t k_diff \t\t\t k_aprox \t k_diff \n');
+            fprintf(fid,'k_aprox \t k_diff \t\t k_aprox \t k_diff \n');
             fprintf(fid,'%5.5f \t %5.5f \t\t\t %5.5f \t %5.5f \n',TK4a1,TK41,TK4a2,TK42);
  			fprintf(fid,'%s\n',ln_str);
 
