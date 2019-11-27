@@ -84,6 +84,10 @@ classdef ResonatorAcousticData
 			arr = sortrows([ra_all', ri_all']);
 			ra_all = arr(:,1);
 			rf_all = arr(:,2); clear arr;
+            if isempty(ra_all)||isempty(rf_all)
+                ra_all = 0;
+				rf_all = 0;
+            end
 		    if length(ra_all)>1
 				arr = sortrows([rf_all(end-1:end),ra_all(end-1:end)]);
 				ra_1 = arr(1,2);
@@ -98,8 +102,13 @@ classdef ResonatorAcousticData
 				ri_1 = rf_all;
 				ra_2 = 0;
 				ri_2 = 0;
-		        ResData.Frequency = [xx(ri_1) 0];
-		        ResData.Amplitude = [ra_1 0];
+                if ri_1 ~= 0
+                    ResData.Frequency = [xx(ri_1) 0];
+                    ResData.Amplitude = [ra_1 0];
+                else
+                    ResData.Frequency = [0 0];
+                    ResData.Amplitude = [0 0];
+                end
 		    end
 			ResData.R_fft_data = [fq(dd(1):dd(2))', A(dd(1):dd(2))];
             ResData.ri_1 = ri_1;
@@ -109,7 +118,7 @@ classdef ResonatorAcousticData
 
 		function QFactor = GetQFactor(obj,Data,i_off)
 			% QFactor = GetQFactor(obj,Data,i_off) 
-
+            QFactor = [0 0];
 			% Initialisation
 			if nargin < 2
 				i_off = 6000;
@@ -120,7 +129,7 @@ classdef ResonatorAcousticData
             fq = Data.R_fft_data(:,1);
             A = Data.R_fft_data(:,2);
             ri_1 = Data.ri_1;
-            if isempty(ri_1)
+            if isempty(ri_1)||ri_1==0
                 disp(['Not find 1st ind QFactor in ',obj.path])
                 return
             end
