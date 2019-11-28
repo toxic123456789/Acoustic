@@ -45,8 +45,6 @@ classdef TemperatureDataSound
         		'Position',[0.8 0.77+0.07 0.2 0.08],'callback',@btn_find_path,...
         		'String','find ','tag','btn_path');
 
-
-
             txt_prew =  uicontrol('Parent',F,'Style','text','Units','Normalized',...
         		'Position',[0.02 0.65+0.12 0.78 0.07],...
         		'String','File prewiev','tag','txt_prew');
@@ -62,8 +60,6 @@ classdef TemperatureDataSound
             btn_prew = uicontrol('Parent',F,'Style','pushbutton','Units','Normalized',...
         		'Position',[0.80 0.575+0.14 0.2 0.07],'callback',@btn_prew_file,...
         		'String','File prewiev','tag','btn_prew');
-
-            
 
             txt_diap =  uicontrol('Parent',F,'Style','text','Units','Normalized',...
         		'Position',[0.02 0.45+0.17 0.78 0.07],...
@@ -729,201 +725,96 @@ classdef TemperatureDataSound
 			QFactor0 = QFactor;
 			QFactor0 = QFactor;            
         
-
+            curT = obj.getF('T',t_num);
 			% ============= Sort data ===================
 
-			mFq = mean(mean(Frequency));
-			nA = Amplitude;%/mean(max(Amplitude));
-
-% 			figure(2); hold on; plot(Frequency(:,1)); plot(Frequency(:,2));
-			for i = 1:size(Frequency,1)
-			    temp1 = [Frequency(i,1) Amplitude(i,1) QFactor(i,1)];
-			    temp2 = [Frequency(i,2) Amplitude(i,2) QFactor(i,2)];
-			    
-			    if Frequency(i,1)>mFq && Frequency(i,2)<mFq
-			        buff = temp1; temp1 = temp2; temp2 = buff; % 1st = 2d, 2d = 1st
-			    elseif Frequency(i,1)<mFq && Frequency(i,2)<mFq
-			        if(nA(i,1) > nA(i,2))
-			            temp2 = [0,0,0];
-			        elseif (nA(i,1) < nA(i,2))
-			            temp1 = temp2; temp2 = [0,0,0]; % 1st = 2d, 2d = 0 
-			        end
-			    elseif Frequency(i,1)>mFq && Frequency(i,2)>mFq
-			        if(nA(i,1) > nA(i,2))
-			            temp2 = temp1; temp1 = [0,0,0]; % 2d = 1st, 2d = 0 
-			        elseif (nA(i,1) < nA(i,2))
-			            temp1 = [0,0,0];
-			        end
+            nAmplitude = Amplitude0./max(max(Amplitude));
+            [sArr sInd] = sort(abs(nAmplitude(:,1)-nAmplitude(:,2)));
+            midleInd = 0;
+            for j = 1:length(sInd)
+                if nAmplitude(sInd(j),1)>0.25
+                    midleInd = sInd(j);
                 end
-                Frequency(i,:)=[temp1(1), temp2(1)];
-			    Amplitude(i,:)=[temp1(2), temp2(2)];
-			    QFactor(i,:)=[temp1(3), temp2(3)];
-			    temp1 = []; temp2 = []; buff = [];
-                
-% 			    cla;
-%               ind1 = find(Frequency(:,1)); ind2 = find(Frequency(:,2));
-% 			    plot(ind1, Frequency(ind1,1)); plot(ind2,Frequency(ind2,2));
-% 			    plot([i i], get(gca,'YLim'),'r:','linewidth',2);
-% 			    pause(0.1);
-			end
-            ind1 = find(Frequency(:,1)); ind2 = find(Frequency(:,2));
-			%  ======== Save sorted data in structure =============
-			curT = getF(obj,'T',t_num);
-			for i = 1:size(Amplitude,1)
-				curA = getF(obj,'A',i,t_num);
-				obj.data.(curT).(curA).Frequency = Frequency(i,:);
-				obj.data.(curT).(curA).Amplitude = Amplitude(i,:);
-				obj.data.(curT).(curA).QFactor = QFactor(i,:);
+                if midleInd ~= 0 
+                    break
+                end
             end
-            obj.data.(curT).meanFq_1 = mean(Frequency(ind1,1));
-            obj.data.(curT).meanFq_2 = mean(Frequency(ind2,2));
+            if midleInd~=0
+                % Set the support frequencies
+                fq1 = Frequency0(midleInd,1);
+                obj.data.(curT).meanFq_1 = fq1;
+                fq2 = Frequency0(midleInd,2);
+                obj.data.(obj.getF('T',t_num)).meanFq_2 = fq2;
+                ind1 = find(nAmplitude(:,1)>0.1); ind11 = find(Frequency0(:,1)>0);
+                ind2 = find(nAmplitude(:,2)>0.1); ind22 = find(Frequency0(:,2)>0);
+                ind1 = intersect(ind1,ind11);
+                ind2 = intersect(ind2,ind22);
+                % concatenate two vectors
+                Frequency1 = [Frequency0(ind1,1); Frequency0(ind2,2)];
+                Amplitude1 = [Amplitude0(ind1,1); Amplitude0(ind2,2)];
+                QFactor1 = [QFactor0(ind1,1); QFactor0(ind2,2)];
+                Index = [ind1;ind2];
+                if ~isempty(intersect(ind1,ind2))
+                    disp('!!!!!!!!!!!!!!!!!!!!!! the same index find')
+                end
+                % Sort new two freq and ampl vectors;
+                ln = length(Frequency0(:,1));
+                vFq1(1:ln) = 0; vFq2(1:ln) = 0;
+                vAm1(1:ln) = 0; vAm2(1:ln) = 0;
+                vQf1(1:ln) = 0; vQf2(1:ln) = 0;
+                figure; hold on; plot(ind1,Frequency0(ind1,1),'o-'); plot(ind2,Frequency0(ind2,2),'o-');
+                plot(get(gca,'XLim'),[fq1 fq1],'r--');
+                plot(get(gca,'XLim'),[fq2 fq2],'r--');
+                bb = plot([Index(1) Index(1)],get(gca,'YLim'),'b--');
+                for i = 1:length(Index)
+%                         delete(bb);
+                    bb = plot([Index(i) Index(i)],get(gca,'YLim'),'b--');
+                    if abs(Frequency1(i)-fq1)<abs(Frequency1(i)-fq2)
+                        vFq1(Index(i)) = Frequency1(i);
+                        vAm1(Index(i)) = Amplitude1(i);
+                        vQf1(Index(i)) = QFactor1(i);
+                        plot(Index(i),vFq1(Index(i)),'bp');
+                    elseif abs(Frequency1(i)-fq2)<abs(Frequency1(i)-fq1)
+                        vFq2(Index(i)) = Frequency1(i);
+                        vAm2(Index(i)) = Amplitude1(i);
+                        vQf2(Index(i)) = QFactor1(i);
+                        plot(Index(i),vFq2(Index(i)),'r*');
+                    end
 
-            % ======== Reload empty frequencies ===================
-            ind1 = find(~Frequency(:,1)); ind2 = find(~Frequency(:,2));
-            maxA = max(max(Amplitude));
-            dopusk_amp = 0.01;
-            dopusk_frq = 0.05;
-            for i = 1:length(ind1)
-            	diap = [obj.data.(curT).meanFq_1-0.3 obj.data.(curT).meanFq_1+0.3];
-            	d = ResonatorAcousticData([obj.path,obj.data.(curT).names{ind1(i)}],diap);
-                [vv, ii] = max(d.Amplitude);
-                curA = getF(obj,'A',ind1(i),t_num);
-				obj.data.(curT).(curA).Frequency(1) = d.Frequency(ii);
-				obj.data.(curT).(curA).Amplitude(1) = d.Amplitude(ii);
-                obj.data.(curT).(curA).QFactor(1) = d.QFactor(ii);
-                if (d.Amplitude(ii)/maxA < dopusk_amp) || abs(d.Frequency(ii)-obj.data.(curT).meanFq_1) > dopusk_frq
+                end
+                % find eq
+                ind1 = find(vFq1>0);
+                ind2 = find(vFq2>0);
+
+                % zeroing previous results
+                for i = 1:length(obj.data.(['T',num2str(obj.T(t_num))]).angles)
+                    curA = getF(obj,'A',i,t_num);
                     obj.data.(curT).(curA).QFactor(1) = 0;
                     obj.data.(curT).(curA).Frequency(1) = 0;
                     obj.data.(curT).(curA).Amplitude(1) = 0;
-                end
-            end
-            for i = 1:length(ind2)
-            	diap = [obj.data.(curT).meanFq_2-0.3 obj.data.(curT).meanFq_2+0.3];
-            	d = ResonatorAcousticData([obj.path,obj.data.(curT).names{ind2(i)}],diap);
-                [vv, ii] = max(d.Amplitude);
-                curA = getF(obj,'A',ind2(i),t_num);
-				obj.data.(curT).(curA).Frequency(2) = d.Frequency(ii);
-				obj.data.(curT).(curA).Amplitude(2) = d.Amplitude(ii);
-                if d.Amplitude(ii)/maxA < dopusk_amp || abs(d.Frequency(ii)-obj.data.(curT).meanFq_2) > dopusk_frq
                     obj.data.(curT).(curA).QFactor(2) = 0;
                     obj.data.(curT).(curA).Frequency(2) = 0;
                     obj.data.(curT).(curA).Amplitude(2) = 0;
                 end
-            end
-            
-            % addition filter by mean frequency
-            for i = 1:length(Frequency(:,1))
-                curA = getF(obj,'A',i,t_num);
-                try
-                    meanFq_1 = obj.data.(curT).meanFq_1;
-                    meanFq_2 = obj.data.(curT).meanFq_2;
-                    if (obj.data.(curT).(curA).Amplitude(1)/maxA < dopusk_amp) || abs(obj.data.(curT).(curA).Frequency(1)-obj.data.(curT).meanFq_1) > dopusk_frq
-                        obj.data.(curT).(curA).QFactor(1) = 0;
-                        obj.data.(curT).(curA).Frequency(1) = 0;
-                        obj.data.(curT).(curA).Amplitude(1) = 0;
-                    end
-                    if (obj.data.(curT).(curA).Amplitude(2)/maxA < dopusk_amp) || abs(obj.data.(curT).(curA).Frequency(2)-obj.data.(curT).meanFq_2) > dopusk_frq
-                        obj.data.(curT).(curA).QFactor(2) = 0;
-                        obj.data.(curT).(curA).Frequency(2) = 0;
-                        obj.data.(curT).(curA).Amplitude(2) = 0;
-                    end
-                catch
-                    disp('Addition check crash');
+                % processing & writing new results
+                for i = 1:length(ind1)
+                    curA = getF(obj,'A',ind1(i),t_num);
+                    obj.data.(curT).(curA).Frequency(1) = vFq1(ind1(i));
+                    obj.data.(curT).(curA).Amplitude(1) = vAm1(ind1(i));
+                    obj.data.(curT).(curA).QFactor(1) = vQf1(ind1(i));
                 end
+
+                for i = 1:length(ind2)
+                    curA = getF(obj,'A',ind2(i),t_num);
+                    obj.data.(curT).(curA).Frequency(2) = vFq2(ind2(i));
+                    obj.data.(curT).(curA).Amplitude(2) = vAm2(ind2(i));
+                    obj.data.(curT).(curA).QFactor(2) = vQf2(ind2(i));
+                end
+
+            else
+                disp('Exit from additional sorting procedure/not found support freq');
             end
 
-            % check for length array
-            
-            if  length(find(obj.getData('Frequency',t_num,1))) < length(obj.data.(['T',num2str(obj.T(t_num))]).angles)/2
-                disp('Enter to the additional sorting procedure')
-                nAmplitude = Amplitude0./max(max(Amplitude));
-                [sArr sInd] = sort(abs(nAmplitude(:,1)-nAmplitude(:,2)));
-                midleInd = 0;
-                for j = 1:length(sInd)
-                    if nAmplitude(sInd(j),1)>0.25
-                        midleInd = sInd(j);
-                    end
-                    if midleInd ~= 0 
-                        break
-                    end
-                end
-                if midleInd~=0
-                    % Set the support frequencies
-                    fq1 = Frequency0(midleInd,1);
-                    fq2 = Frequency0(midleInd,2);
-                    ind1 = find(nAmplitude(:,1)>0.1); ind11 = find(Frequency0(:,1)>0);
-                    ind2 = find(nAmplitude(:,2)>0.1); ind22 = find(Frequency0(:,2)>0);
-                    ind1 = intersect(ind1,ind11);
-                    ind2 = intersect(ind2,ind22);
-                    % concatenate two vectors
-                    Frequency1 = [Frequency0(ind1,1); Frequency0(ind2,2)];
-                    Amplitude1 = [Amplitude0(ind1,1); Amplitude0(ind2,2)];
-                    QFactor1 = [QFactor0(ind1,1); QFactor0(ind2,2)];
-                    Index = [ind1;ind2];
-                    if ~isempty(intersect(ind1,ind2))
-                        disp('!!!!!!!!!!!!!!!!!!!!!! the same index find')
-                    end
-                    % Sort new two freq and ampl vectors;
-                    ln = length(Frequency0(:,1));
-                    vFq1(1:ln) = 0; vFq2(1:ln) = 0;
-                    vAm1(1:ln) = 0; vAm2(1:ln) = 0;
-                    vQf1(1:ln) = 0; vQf2(1:ln) = 0;
-                    figure; hold on; plot(ind1,Frequency0(ind1,1),'o-'); plot(ind2,Frequency0(ind2,2),'o-');
-                    plot(get(gca,'XLim'),[fq1 fq1],'r--');
-                    plot(get(gca,'XLim'),[fq2 fq2],'r--');
-                    bb = plot([Index(1) Index(1)],get(gca,'YLim'),'b--');
-                    for i = 1:length(Index)
-%                         delete(bb);
-                        bb = plot([Index(i) Index(i)],get(gca,'YLim'),'b--');
-                        if abs(Frequency1(i)-fq1)<abs(Frequency1(i)-fq2)
-                            vFq1(Index(i)) = Frequency1(i);
-                            vAm1(Index(i)) = Amplitude1(i);
-                            vQf1(Index(i)) = QFactor1(i);
-                            plot(Index(i),vFq1(Index(i)),'bp');
-                        elseif abs(Frequency1(i)-fq2)<abs(Frequency1(i)-fq1)
-                            vFq2(Index(i)) = Frequency1(i);
-                            vAm2(Index(i)) = Amplitude1(i);
-                            vQf2(Index(i)) = QFactor1(i);
-                            plot(Index(i),vFq2(Index(i)),'r*');
-                        end
-                        
-                    end
-                    % find equ
-                    
-                    
-                    
-                    ind1 = find(vFq1>0);
-                    ind2 = find(vFq2>0);
-                    
-                    % zeroing previous results
-                    for i = 1:length(obj.data.(['T',num2str(obj.T(t_num))]).angles)
-                        curA = getF(obj,'A',i,t_num);
-                        obj.data.(curT).(curA).QFactor(1) = 0;
-                        obj.data.(curT).(curA).Frequency(1) = 0;
-                        obj.data.(curT).(curA).Amplitude(1) = 0;
-                        obj.data.(curT).(curA).QFactor(2) = 0;
-                        obj.data.(curT).(curA).Frequency(2) = 0;
-                        obj.data.(curT).(curA).Amplitude(2) = 0;
-                    end
-                    % processing & writing new results
-                    for i = 1:length(ind1)
-                        curA = getF(obj,'A',ind1(i),t_num);
-                        obj.data.(curT).(curA).Frequency(1) = vFq1(ind1(i));
-                        obj.data.(curT).(curA).Amplitude(1) = vAm1(ind1(i));
-                        obj.data.(curT).(curA).QFactor(1) = vQf1(ind1(i));
-                    end
-
-                    for i = 1:length(ind2)
-                        curA = getF(obj,'A',ind2(i),t_num);
-                        obj.data.(curT).(curA).Frequency(2) = vFq2(ind2(i));
-                        obj.data.(curT).(curA).Amplitude(2) = vAm2(ind2(i));
-                        obj.data.(curT).(curA).QFactor(2) = vQf2(ind2(i));
-                    end
-
-                else
-                    disp('Exit from additional sorting procedure/not found support freq');
-                end
-            end
 
             
             
@@ -1106,7 +997,7 @@ classdef TemperatureDataSound
             hold(axs1,'on');
         	plot(A1(ind),F2(ind),'b*--','linewidth',1.5,'Parent',axs1);            
         	set(axs1,'GridAlpha',1,'XGrid','on','YGrid','on'); 
-        	PlotCurrentFft(axs2);
+        	PlotCurrentFft();
             set(axs2,'GridAlpha',1,'XGrid','on','YGrid','on'); 
 
         	% UI functions
@@ -1121,8 +1012,8 @@ classdef TemperatureDataSound
                 cla(axs1);
                 cla(axs2);
                 
-                p = PlotCurrentPar(axs1);
-                p = PlotCurrentFft(axs2);
+                PlotCurrentPar(axs1);
+                PlotCurrentFft();
 
                 edtF_P1.String = num2str(obj.getData('Frequency',v(1),1,num));
                 edtF_P2.String = num2str(obj.getData('Frequency',v(1),2,num));
@@ -1139,18 +1030,19 @@ classdef TemperatureDataSound
                 n = obj.data.(getF(obj,'T',v(1))).angles(num);
                 plot([n, n]',YL1','k--','linewidth',1.5,'Parent',axs1);
                 set(axs1,'YLim',YL1);
-               
             end
 
             
             function PopupList_Func(src,evt)
                 PlotCurrentPar(axs1);
-                PlotCurrentFft(axs2);
+                PlotCurrentFft();
+                axs1.YLimMode = 'auto';
             end
 
             function ChbTemp_Func(src,evt)
                 PlotCurrentPar(axs1);
-                PlotCurrentFft(axs2);
+                PlotCurrentFft();
+                axs1.YLimMode = 'auto';
             end
 
             function CheckGrid_Func(src,evt)
@@ -1183,8 +1075,8 @@ classdef TemperatureDataSound
 
                 num = round(get(sld,'Value'));
                 v = getTchb();
-                
-
+                lbx = src.Parent.Parent.Parent.findobj('Tag','lst_file');
+                nameObj = lbx.String(lbx.Value);
                 F_P1 = str2num(edtF_P1.String);
                 F_P2 = str2num(edtF_P2.String);
                 A_P1 = str2num(edtA_P1.String);
@@ -1199,10 +1091,9 @@ classdef TemperatureDataSound
                 obj = obj.setData('Amplitude',v(1),2,num,A_P2);
                 obj = obj.setData('QFactor',v(1),1,num,Q_P1);
                 obj = obj.setData('QFactor',v(1),2,num,Q_P2);
-
-
+                
                 p = PlotCurrentPar(axs1);
-                p = PlotCurrentFft(axs2);
+                p = PlotCurrentFft();
 
                 axs1.YLimMode = 'auto';
                 axs2.YLimMode = 'auto';
@@ -1211,11 +1102,12 @@ classdef TemperatureDataSound
                 n = obj.data.(getF(obj,'T',v(1))).angles(num);
                 plot([n, n]',YL1','k--','linewidth',1.5,'Parent',axs1);
                 set(axs1,'YLim',YL1);
-
+                
+                assignin('base',nameObj,obj);
             end
+            
 			% Plot functions             
         	%----------------------------------------------
-
             function p = PlotCurrentPar(hAx)
             	cla(hAx);
                 hold on;
@@ -1254,9 +1146,9 @@ classdef TemperatureDataSound
             end
 
 
-            function p = PlotCurrentFft(hAx)
+            function p = PlotCurrentFft()
             	p = [];
-            	cla(hAx);
+            	cla(axs2);
 
             	% get temperature checkboxes
                 temper = getTchb();
@@ -1270,14 +1162,13 @@ classdef TemperatureDataSound
                 min_marg = obj.data.(getF(obj,'T',temper(1))).meanFq_1;
                 max_marg = obj.data.(getF(obj,'T',temper(1))).meanFq_2;
                 for i = 1:length(temper)
-                    try
+                    % try
                     curT = getF(obj,'T',temper(i));
                     curA = getF(obj,'A',numA,temper(i));
 	                [xx, yy] = InterpFreq(obj, temper(i), numA);
 	                fq = obj.data.(curT).(curA).R_fft_data(:,1);
 	                A = obj.data.(curT).(curA).R_fft_data(:,2);
-	                plot(gca,xx, yy,[T_colors(temper(i)),'.'])
-% 	            	plot(fq,A,'ob','Parent',hAx);
+	                plot(xx, yy,[T_colors(temper(i)),'.'],'Parent',axs2)
 	                % find resonance 1 parameters
 	                if obj.data.(curT).(curA).Frequency(1) ~= 0
 	                	F1 = obj.data.(curT).(curA).Frequency(1);
@@ -1288,7 +1179,7 @@ classdef TemperatureDataSound
  	                	fr1_ind = diap(1) + fr1_ind + 1;
 	                	Q1 = obj.data.(curT).(curA).QFactor(1);
 
-	                	plot(xx(fr1_ind),yy(fr1_ind),[T_colors(temper(i)),'v'],'MarkerSize',10);
+	                	plot(xx(fr1_ind),yy(fr1_ind),[T_colors(temper(i)),'v'],'MarkerSize',10,'Parent',axs2);
 	                	text(xx(fr1_ind)+0.05,yy(fr1_ind)+yy(fr1_ind)*0.01,['F1 = ',num2str(F1)],...
                             'Color',T_colors(temper(i)));
 	                	text(xx(fr1_ind)+0.15,yy(fr1_ind)*0.707,['Q1 = ',num2str(Q1)],...
@@ -1304,11 +1195,11 @@ classdef TemperatureDataSound
 	                	fr2_ind = diap(1) + fr2_ind + 1;
 	                	Q2 = obj.data.(curT).(curA).QFactor(2);
 
-	                	plot(xx(fr2_ind),yy(fr2_ind),[T_colors(temper(i)),'v'],'MarkerSize',10);
+	                	plot(xx(fr2_ind),yy(fr2_ind),[T_colors(temper(i)),'v'],'MarkerSize',10,'Parent',axs2);
 	                	text(xx(fr2_ind)+0.05,yy(fr2_ind)+yy(fr2_ind)*0.01,['F2 = ',num2str(F2)],...
-                            'Color',T_colors(temper(i)));
+                            'Color',T_colors(temper(i)),'Parent',axs2);
 	                	text(xx(fr2_ind)+0.15,yy(fr2_ind)*0.707,['Q2 = ',num2str(Q2)],...
-                            'Color',T_colors(temper(i)));
+                            'Color',T_colors(temper(i)),'Parent',axs2);
                     end
                     if obj.data.(curT).meanFq_1 < min_marg
                         min_marg = obj.data.(curT).meanFq_1;
@@ -1316,8 +1207,8 @@ classdef TemperatureDataSound
                     if obj.data.(curT).meanFq_2 > min_marg
                         max_marg = obj.data.(curT).meanFq_2;
                     end
-                    set(gca,'XLim',[min_marg-3 max_marg+3]);
-                    end% try
+                    axs2.XLim = [min_marg-3 max_marg+3];
+                    % end% try
                 end
             end
 
