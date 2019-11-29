@@ -739,85 +739,107 @@ classdef TemperatureDataSound
                     break
                 end
             end
-            if midleInd~=0
-                % Set the support frequencies
-                fq1 = Frequency0(midleInd,1);
-                obj.data.(curT).meanFq_1 = fq1;
-                fq2 = Frequency0(midleInd,2);
-                obj.data.(obj.getF('T',t_num)).meanFq_2 = fq2;
-                ind1 = find(nAmplitude(:,1)>0.1); ind11 = find(Frequency0(:,1)>0);
-                ind2 = find(nAmplitude(:,2)>0.1); ind22 = find(Frequency0(:,2)>0);
-                ind1 = intersect(ind1,ind11);
-                ind2 = intersect(ind2,ind22);
-                % concatenate two vectors
-                Frequency1 = [Frequency0(ind1,1); Frequency0(ind2,2)];
-                Amplitude1 = [Amplitude0(ind1,1); Amplitude0(ind2,2)];
-                QFactor1 = [QFactor0(ind1,1); QFactor0(ind2,2)];
-                Index = [ind1;ind2];
-                if ~isempty(intersect(ind1,ind2))
-                    disp('!!!!!!!!!!!!!!!!!!!!!! the same index find')
-                end
-                % Sort new two freq and ampl vectors;
-                ln = length(Frequency0(:,1));
-                vFq1(1:ln) = 0; vFq2(1:ln) = 0;
-                vAm1(1:ln) = 0; vAm2(1:ln) = 0;
-                vQf1(1:ln) = 0; vQf2(1:ln) = 0;
-                figure; hold on; plot(ind1,Frequency0(ind1,1),'o-'); plot(ind2,Frequency0(ind2,2),'o-');
-                plot(get(gca,'XLim'),[fq1 fq1],'r--');
-                plot(get(gca,'XLim'),[fq2 fq2],'r--');
-                bb = plot([Index(1) Index(1)],get(gca,'YLim'),'b--');
-                for i = 1:length(Index)
-%                         delete(bb);
-                    bb = plot([Index(i) Index(i)],get(gca,'YLim'),'b--');
-                    if abs(Frequency1(i)-fq1)<abs(Frequency1(i)-fq2)
+            % Set the support frequencies
+            fq1 = Frequency0(midleInd,1);
+            obj.data.(curT).meanFq_1 = fq1;
+            fq2 = Frequency0(midleInd,2);
+            obj.data.(obj.getF('T',t_num)).meanFq_2 = fq2;
+            ind1 = find(nAmplitude(:,1)>0.1); ind11 = find(Frequency0(:,1)>0);
+            ind2 = find(nAmplitude(:,2)>0.1); ind22 = find(Frequency0(:,2)>0);
+            ind1 = intersect(ind1,ind11);
+            ind2 = intersect(ind2,ind22);
+            % concatenate two vectors
+            Frequency1 = [Frequency0(ind1,1); Frequency0(ind2,2)];
+            Amplitude1 = [Amplitude0(ind1,1); Amplitude0(ind2,2)];
+            QFactor1 = [QFactor0(ind1,1); QFactor0(ind2,2)];
+            Index = [ind1;ind2];
+            if ~isempty(intersect(ind1,ind2))
+                disp('!!!!!!!!!!!!!!!!!!!!!! the same index find')
+            end
+            % Sort new two freq and ampl vectors;
+            ln = length(Frequency0(:,1));
+            vFq1(1:ln) = 0; vFq2(1:ln) = 0;
+            vAm1(1:ln) = 0; vAm2(1:ln) = 0;
+            vQf1(1:ln) = 0; vQf2(1:ln) = 0;
+            figure; hold on; plot(ind1,Frequency0(ind1,1),'o-'); plot(ind2,Frequency0(ind2,2),'o-');
+            plot(get(gca,'XLim'),[fq1 fq1],'r--');
+            plot(get(gca,'XLim'),[fq2 fq2],'r--');
+            bb = plot([Index(1) Index(1)],get(gca,'YLim'),'b--');
+            for i = 1:length(Index)
+                        delete(bb);
+                bb = plot([Index(i) Index(i)],get(gca,'YLim'),'b--');
+                if abs(Frequency1(i)-fq1)<abs(Frequency1(i)-fq2)
+                    if vFq1(Index(i))==0
                         vFq1(Index(i)) = Frequency1(i);
                         vAm1(Index(i)) = Amplitude1(i);
                         vQf1(Index(i)) = QFactor1(i);
-                        plot(Index(i),vFq1(Index(i)),'bp');
-                    elseif abs(Frequency1(i)-fq2)<abs(Frequency1(i)-fq1)
+                    else
+                        if Frequency1(i) > vFq1(Index(i))
+                            vFq2(Index(i)) = Frequency1(i);
+                            vAm2(Index(i)) = Amplitude1(i);
+                            vQf2(Index(i)) = QFactor1(i);
+                        else
+                            vFq2(Index(i)) = vFq1(Index(i));
+                            vAm2(Index(i)) = vAm1(Index(i));
+                            vQf2(Index(i)) = vQf1(Index(i));
+                            vFq1(Index(i)) = Frequency1(i);
+                            vAm1(Index(i)) = Amplitude1(i);
+                            vQf1(Index(i)) = QFactor1(i);
+                        end
+                    end
+                    plot(Index(i),vFq1(Index(i)),'bp');
+                elseif abs(Frequency1(i)-fq2)<abs(Frequency1(i)-fq1)
+                    if vFq2(Index(i))==0
                         vFq2(Index(i)) = Frequency1(i);
                         vAm2(Index(i)) = Amplitude1(i);
                         vQf2(Index(i)) = QFactor1(i);
-                        plot(Index(i),vFq2(Index(i)),'r*');
+                    else
+                        if Frequency1(i) > vFq2(Index(i))
+                            vFq1(Index(i)) = vFq2(Index(i));
+                            vAm1(Index(i)) = vAm2(Index(i));
+                            vQf1(Index(i)) = vQf2(Index(i));
+                            vFq2(Index(i)) = Frequency1(i);
+                            vAm2(Index(i)) = Amplitude1(i);
+                            vQf2(Index(i)) = QFactor1(i);
+                        else
+                            vFq1(Index(i)) = Frequency1(i);
+                            vAm1(Index(i)) = Amplitude1(i);
+                            vQf1(Index(i)) = QFactor1(i);
+                        end
                     end
-
-                end
-                % find eq
-                ind1 = find(vFq1>0);
-                ind2 = find(vFq2>0);
-
-                % zeroing previous results
-                for i = 1:length(obj.data.(['T',num2str(obj.T(t_num))]).angles)
-                    curA = getF(obj,'A',i,t_num);
-                    obj.data.(curT).(curA).QFactor(1) = 0;
-                    obj.data.(curT).(curA).Frequency(1) = 0;
-                    obj.data.(curT).(curA).Amplitude(1) = 0;
-                    obj.data.(curT).(curA).QFactor(2) = 0;
-                    obj.data.(curT).(curA).Frequency(2) = 0;
-                    obj.data.(curT).(curA).Amplitude(2) = 0;
-                end
-                % processing & writing new results
-                for i = 1:length(ind1)
-                    curA = getF(obj,'A',ind1(i),t_num);
-                    obj.data.(curT).(curA).Frequency(1) = vFq1(ind1(i));
-                    obj.data.(curT).(curA).Amplitude(1) = vAm1(ind1(i));
-                    obj.data.(curT).(curA).QFactor(1) = vQf1(ind1(i));
+                    plot(Index(i),vFq2(Index(i)),'r*');
                 end
 
-                for i = 1:length(ind2)
-                    curA = getF(obj,'A',ind2(i),t_num);
-                    obj.data.(curT).(curA).Frequency(2) = vFq2(ind2(i));
-                    obj.data.(curT).(curA).Amplitude(2) = vAm2(ind2(i));
-                    obj.data.(curT).(curA).QFactor(2) = vQf2(ind2(i));
-                end
+            end
+            % find eq
+            ind1 = find(vFq1>0);
+            ind2 = find(vFq2>0);
 
-            else
-                disp('Exit from additional sorting procedure/not found support freq');
+            % zeroing previous results
+            for i = 1:length(obj.data.(['T',num2str(obj.T(t_num))]).angles)
+                curA = getF(obj,'A',i,t_num);
+                obj.data.(curT).(curA).QFactor(1) = 0;
+                obj.data.(curT).(curA).Frequency(1) = 0;
+                obj.data.(curT).(curA).Amplitude(1) = 0;
+                obj.data.(curT).(curA).QFactor(2) = 0;
+                obj.data.(curT).(curA).Frequency(2) = 0;
+                obj.data.(curT).(curA).Amplitude(2) = 0;
+            end
+            % processing & writing new results
+            for i = 1:length(ind1)
+                curA = getF(obj,'A',ind1(i),t_num);
+                obj.data.(curT).(curA).Frequency(1) = vFq1(ind1(i));
+                obj.data.(curT).(curA).Amplitude(1) = vAm1(ind1(i));
+                obj.data.(curT).(curA).QFactor(1) = vQf1(ind1(i));
             end
 
+            for i = 1:length(ind2)
+                curA = getF(obj,'A',ind2(i),t_num);
+                obj.data.(curT).(curA).Frequency(2) = vFq2(ind2(i));
+                obj.data.(curT).(curA).Amplitude(2) = vAm2(ind2(i));
+                obj.data.(curT).(curA).QFactor(2) = vQf2(ind2(i));
+            end
 
-            
-            
 		end
 
 		
@@ -935,6 +957,9 @@ classdef TemperatureDataSound
         		'Position',[0.55 0.90 0.45 0.09],'String','Point 2','Value', 1, ...
         		'tag','txtP2','fontsize',8);
 
+            btnRew = uicontrol('Parent',group2,'Style','pushbutton','Units','Normalized',...
+        		'Position',[0.40 0.92 0.2 0.07],'callback',@btn_rew,...
+        		'String','R','tag','rew','fontsize',11,'fontweight','normal');
 
     		txt_F = uicontrol('Parent',group2,'Style','text','Units','Normalized',...
         		'Position',[0.25 0.82 0.47 0.09],'String','Frequency','Value', 1, ...
@@ -974,11 +999,17 @@ classdef TemperatureDataSound
         		'Position',[0.55 0.35 0.45 0.09],'String','0','Value', 1, ...
         		'tag','editAP2','fontsize',8);
 
-
             btnSet = uicontrol('Parent',group2,'Style','pushbutton','Units','Normalized',...
         		'Position',[0.20 0.20 0.6 0.1],'callback',@btn_set,...
         		'String','Set','tag','btn_set','fontsize',11,'fontweight','normal');
-
+            
+            btnP01 = uicontrol('Parent',group2,'Style','pushbutton','Units','Normalized',...
+        		'Position',[0.02 0.20 0.16 0.1],'callback',@btn_zero,...
+        		'String','0','tag','btn_P01','fontsize',11,'fontweight','normal');
+            btnP02 = uicontrol('Parent',group2,'Style','pushbutton','Units','Normalized',...
+        		'Position',[0.82 0.20 0.16 0.1],'callback',@btn_zero,...
+        		'String','0','tag','btn_P02','fontsize',11,'fontweight','normal');
+            
             chbGrid2 = uicontrol('Parent',group2,'Style','checkbox','Units','Normalized',...
         		'Position',[0.05 0.05 0.5 0.09],'callback',@(src,evt)CheckGrid_Func(src,evt),...
         		'String','Grid2','Value', 1, ...
@@ -1071,12 +1102,40 @@ classdef TemperatureDataSound
 		        p = PlotCurrentPar(axs1);
             end
             
+            function btn_rew(src,evt)
+                    
+                    buf_1 = edtF_P1.String;
+                    buf_2 = edtA_P1.String;
+                    buf_3 = edtQ_P1.String;
+
+                    edtF_P1.String = edtF_P2.String;
+                    edtA_P1.String = edtA_P2.String;
+                    edtQ_P1.String = edtQ_P2.String;
+
+                    edtF_P2.String = buf_1;
+                    edtA_P2.String = buf_2;
+                    edtQ_P2.String = buf_3;
+            end
+            
+            function btn_zero(src,evt)
+                if strcmp(evt.Source.Tag,'btn_P01')
+                    edtF_P1.String = '0';
+                    edtA_P1.String = '0';
+                    edtQ_P1.String = '0';
+                end
+                if strcmp(evt.Source.Tag,'btn_P02')
+                    edtF_P2.String = '0';
+                    edtA_P2.String = '0';
+                    edtQ_P2.String = '0';
+                end
+            end
+            
             function btn_set(src,evt)
 
                 num = round(get(sld,'Value'));
                 v = getTchb();
                 lbx = src.Parent.Parent.Parent.findobj('Tag','lst_file');
-                nameObj = lbx.String(lbx.Value);
+                nameObj = lbx.String{lbx.Value};
                 F_P1 = str2num(edtF_P1.String);
                 F_P2 = str2num(edtF_P2.String);
                 A_P1 = str2num(edtA_P1.String);
