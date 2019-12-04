@@ -891,11 +891,10 @@ classdef TemperatureDataSound
 
         end
 
-
         function PlotByList(obj)
         	f = figure;
         	T_colors = ['b','g','r','c','m','k','y'];
-
+            
    			uicontrol('Parent',f,'Style','text','tag','txtTemper','Units','Normalized',...
         		'Position',[0.1 0.92 0.2 0.05],'fontsize',12,'String','Temperture:',...
         		'backgroundcolor','r');
@@ -914,7 +913,7 @@ classdef TemperatureDataSound
             % group #1 elements
             %=====================================
         	% axes for plot all parameters
-        	axs1 = axes('Parent',f,'Units','Normalized','Position',[0.09 0.48 0.69 0.4]);
+        	axs1 = axes('Parent',f,'Units','Normalized','Position',[0.19 0.48 0.59 0.4]);
             group1 = uipanel('Units','normalize','tag','frm','Position',[0.79 0.48 0.2 0.4],'Title','Data');
         	ppmGraph = uicontrol('Parent',group1,'Style','popupmenu','Units','Normalized',...
         		'Position',[0.05 0.85 0.9 0.1],'tag','ppmGraph',...
@@ -943,97 +942,115 @@ classdef TemperatureDataSound
         		'String','Grid1','Value', 1, ...
         		'tag','chbGrid','backgroundcolor','r');
 
+            % axes #1 uicontrols
+            %=====================================
+            group3 = uipanel('Units','normalize','tag','frm','Position',[0.01 0.48 0.12 0.4],'Title','Plot');
+            btnPlotYY_data = uicontrol('Parent',group3,'Style','pushbutton','Units','Normalized',...
+                'Position',[0.05 0.05 0.9 0.1],'callback',@btn_Plot_yy,...
+                'String','PlotYY','tag','Plot_yy','fontsize',11,'fontweight','normal');
+
             % group #2 elements
             %=====================================
-        	% axes for plot in current point
-        	axs2 = axes('Parent',f,'Units','Normalized','Position',[0.09 0.05 0.69 0.38]);
-			group2 = uipanel('Units','normalize','tag','frm','Position',[0.79 0.05 0.2 0.44],'Title','Point');
+            % axes for plot in current point
+            axs2 = axes('Parent',f,'Units','Normalized','Position',[0.19 0.05 0.58 0.35]);
+            group2 = uipanel('Units','normalize','tag','frm','Position',[0.79 0.05 0.2 0.44],'Title','Point');
 
             txt_P1 = uicontrol('Parent',group2,'Style','text','Units','Normalized',...
-        		'Position',[0.05 0.90 0.45 0.09],'String','Point 1','Value', 1, ...
-        		'tag','txtP1','fontsize',8);
+                'Position',[0.05 0.90 0.45 0.09],'String','Point 1','Value', 1, ...
+                'tag','txtP1','fontsize',8);
 
-    		txt_P2 = uicontrol('Parent',group2,'Style','text','Units','Normalized',...
-        		'Position',[0.55 0.90 0.45 0.09],'String','Point 2','Value', 1, ...
-        		'tag','txtP2','fontsize',8);
+            txt_P2 = uicontrol('Parent',group2,'Style','text','Units','Normalized',...
+                'Position',[0.55 0.90 0.45 0.09],'String','Point 2','Value', 1, ...
+                'tag','txtP2','fontsize',8);
 
             btnRew = uicontrol('Parent',group2,'Style','pushbutton','Units','Normalized',...
-        		'Position',[0.40 0.92 0.2 0.07],'callback',@btn_rew,...
-        		'String','R','tag','rew','fontsize',11,'fontweight','normal');
+                'Position',[0.40 0.92 0.2 0.07],'callback',@btn_rew,...
+                'String','R','tag','rew','fontsize',11,'fontweight','normal');
 
-    		txt_F = uicontrol('Parent',group2,'Style','text','Units','Normalized',...
-        		'Position',[0.25 0.82 0.47 0.09],'String','Frequency','Value', 1, ...
-        		'tag','txtF','fontsize',8);
+            txt_F = uicontrol('Parent',group2,'Style','text','Units','Normalized',...
+                'Position',[0.25 0.82 0.47 0.09],'String','Frequency','Value', 1, ...
+                'tag','txtF','fontsize',8);
 
             edtF_P1 = uicontrol('Parent',group2,'Style','edit','Units','Normalized',...
-        		'Position',[0.05 0.75 0.45 0.09],'String','0','Value', 1, ...
-        		'tag','editFP1','fontsize',8);
+                'Position',[0.05 0.75 0.45 0.09],'String','0','Value', 1, ...
+                'tag','editFP1','fontsize',8);
 
-    		edtF_P2 = uicontrol('Parent',group2,'Style','edit','Units','Normalized',...
-        		'Position',[0.55 0.75 0.45 0.09],'String','0','Value', 1, ...
-        		'tag','editFP2','fontsize',8);
+            edtF_P2 = uicontrol('Parent',group2,'Style','edit','Units','Normalized',...
+                'Position',[0.55 0.75 0.45 0.09],'String','0','Value', 1, ...
+                'tag','editFP2','fontsize',8);
 
 
-    		txt_A = uicontrol('Parent',group2,'Style','text','Units','Normalized',...
-        		'Position',[0.25 0.63 0.47 0.09],'String','Amplitude','Value', 1, ...
-        		'tag','txtA','fontsize',8);
+            txt_A = uicontrol('Parent',group2,'Style','text','Units','Normalized',...
+                'Position',[0.25 0.63 0.47 0.09],'String','Amplitude','Value', 1, ...
+                'tag','txtA','fontsize',8);
 
             edtA_P1 = uicontrol('Parent',group2,'Style','edit','Units','Normalized',...
-        		'Position',[0.05 0.55 0.45 0.09],'String','0','Value', 1, ...
-        		'tag','editAP1','fontsize',8);
+                'Position',[0.05 0.55 0.45 0.09],'String','0','Value', 1, ...
+                'tag','editAP1','fontsize',8);
 
-    		edtA_P2 = uicontrol('Parent',group2,'Style','edit','Units','Normalized',...
-        		'Position',[0.55 0.55 0.45 0.09],'String','0','Value', 1, ...
-        		'tag','editAP2','fontsize',8);
+            edtA_P2 = uicontrol('Parent',group2,'Style','edit','Units','Normalized',...
+                'Position',[0.55 0.55 0.45 0.09],'String','0','Value', 1, ...
+                'tag','editAP2','fontsize',8);
 
 
-    		txt_Q = uicontrol('Parent',group2,'Style','text','Units','Normalized',...
-        		'Position',[0.25 0.42 0.47 0.09],'String','QFactor','Value', 1, ...
-        		'tag','txtQ','fontsize',8);
+            txt_Q = uicontrol('Parent',group2,'Style','text','Units','Normalized',...
+                'Position',[0.25 0.42 0.47 0.09],'String','QFactor','Value', 1, ...
+                'tag','txtQ','fontsize',8);
 
             edtQ_P1 = uicontrol('Parent',group2,'Style','edit','Units','Normalized',...
-        		'Position',[0.05 0.35 0.45 0.09],'String','0','Value', 1, ...
-        		'tag','editAP1','fontsize',8);
+                'Position',[0.05 0.35 0.45 0.09],'String','0','Value', 1, ...
+                'tag','editAP1','fontsize',8);
 
-    		edtQ_P2 = uicontrol('Parent',group2,'Style','edit','Units','Normalized',...
-        		'Position',[0.55 0.35 0.45 0.09],'String','0','Value', 1, ...
-        		'tag','editAP2','fontsize',8);
+            edtQ_P2 = uicontrol('Parent',group2,'Style','edit','Units','Normalized',...
+                'Position',[0.55 0.35 0.45 0.09],'String','0','Value', 1, ...
+                'tag','editAP2','fontsize',8);
 
             btnSet = uicontrol('Parent',group2,'Style','pushbutton','Units','Normalized',...
-        		'Position',[0.20 0.20 0.6 0.1],'callback',@btn_set,...
-        		'String','Set','tag','btn_set','fontsize',11,'fontweight','normal');
+                'Position',[0.20 0.20 0.6 0.1],'callback',@btn_set,...
+                'String','Set','tag','btn_set','fontsize',11,'fontweight','normal');
             
             btnP01 = uicontrol('Parent',group2,'Style','pushbutton','Units','Normalized',...
-        		'Position',[0.02 0.20 0.16 0.1],'callback',@btn_zero,...
-        		'String','0','tag','btn_P01','fontsize',11,'fontweight','normal');
+                'Position',[0.02 0.20 0.16 0.1],'callback',@btn_zero,...
+                'String','0','tag','btn_P01','fontsize',11,'fontweight','normal');
             btnP02 = uicontrol('Parent',group2,'Style','pushbutton','Units','Normalized',...
-        		'Position',[0.82 0.20 0.16 0.1],'callback',@btn_zero,...
-        		'String','0','tag','btn_P02','fontsize',11,'fontweight','normal');
-            
-            chbGrid2 = uicontrol('Parent',group2,'Style','checkbox','Units','Normalized',...
-        		'Position',[0.05 0.05 0.5 0.09],'callback',@(src,evt)CheckGrid_Func(src,evt),...
-        		'String','Grid2','Value', 1, ...
-        		'tag','chbGrid','backgroundcolor','r');
+                'Position',[0.82 0.20 0.16 0.1],'callback',@btn_zero,...
+                'String','0','tag','btn_P02','fontsize',11,'fontweight','normal');
 
-            
-        	cla(axs1);
-        	cla(axs2);
-        	hold on;
-        	F1 = obj.getData('Frequency',1,1);
-        	A1 = obj.getData('Angle',1);
-        	F2 = obj.getData('Frequency',1,2);
-        	ind = find(F1~=0);
-        	plot(A1(ind),F1(ind),'bo--','linewidth',1.5,'Parent',axs1);
+            btnFind = uicontrol('Parent',group2,'Style','pushbutton','Units','Normalized',...
+                'Position',[0.05 0.04 0.4 0.1],'callback',@btn_Find,...
+                'String','Find','tag','btn_Find','fontsize',11,'fontweight','normal');
+                        
+            txt_dFVal = uicontrol('Parent',group2,'Style','text','Units','Normalized',...
+                'Position',[0.5 0.05 0.5 0.09],'String','','Value', 1, ...
+                'tag','txtdFVal','fontsize',8);
+
+            % axes2 uicontrols 
+            %=====================================
+            group4 = uipanel('Units','normalize','tag','frm','Position',[0.01 0.05 0.12 0.40],'Title','Plot');
+            btnPlotAllFFt = uicontrol('Parent',group4,'Style','pushbutton','Units','Normalized',...
+                'Position',[0.05 0.05 0.9 0.1],'callback',@btn_PlotFFt_all,...
+                'String','Plot All','tag','btn_PlotFFtAll','fontsize',11,'fontweight','normal');
+
+            cla(axs1);
+            cla(axs2);
+            hold on;
+            F1 = obj.getData('Frequency',1,1);
+            A1 = obj.getData('Angle',1);
+            F2 = obj.getData('Frequency',1,2);
+            ind = find(F1~=0);
+            plot(A1(ind),F1(ind),'bo--','linewidth',1.5,'Parent',axs1);
             ind = find(F2~=0);
             hold(axs1,'on');
-        	plot(A1(ind),F2(ind),'b*--','linewidth',1.5,'Parent',axs1);            
+            plot(A1(ind),F2(ind),'b*--','linewidth',1.5,'Parent',axs1);            
         	set(axs1,'GridAlpha',1,'XGrid','on','YGrid','on'); 
         	PlotCurrentFft();
-            set(axs2,'GridAlpha',1,'XGrid','on','YGrid','on'); 
+            set(axs2,'GridAlpha',1,'XGrid','on','YGrid','on');
+
+            d = struct('Object',obj,'Diapason',[]);
+            set(f,'UserData',d); 
 
         	% UI functions
         	%----------------------------------------------
-
             
             function SliderFunc(src,evt)
                 num = round(get(sld,'Value'));
@@ -1043,7 +1060,7 @@ classdef TemperatureDataSound
                 cla(axs1);
                 cla(axs2);
                 
-                PlotCurrentPar(axs1);
+                PlotCurrentPar();
                 PlotCurrentFft();
 
                 edtF_P1.String = num2str(obj.getData('Frequency',v(1),1,num));
@@ -1054,26 +1071,21 @@ classdef TemperatureDataSound
                 
                 edtQ_P1.String = num2str(obj.getData('QFactor',v(1),1,num));
                 edtQ_P2.String = num2str(obj.getData('QFactor',v(1),2,num));
-                axs1.YLimMode = 'auto';
-                axs2.YLimMode = 'auto';
                 
                 YL1 = get(axs1,'YLim');
                 n = obj.data.(getF(obj,'T',v(1))).angles(num);
                 plot([n, n]',YL1','k--','linewidth',1.5,'Parent',axs1);
                 set(axs1,'YLim',YL1);
             end
-
             
             function PopupList_Func(src,evt)
-                PlotCurrentPar(axs1);
+                PlotCurrentPar();
                 PlotCurrentFft();
-                axs1.YLimMode = 'auto';
             end
 
             function ChbTemp_Func(src,evt)
-                PlotCurrentPar(axs1);
+                PlotCurrentPar();
                 PlotCurrentFft();
-                axs1.YLimMode = 'auto';
             end
 
             function CheckGrid_Func(src,evt)
@@ -1099,9 +1111,49 @@ classdef TemperatureDataSound
                         chbT{i}.Value = 1;
                     end
 		        end
-		        p = PlotCurrentPar(axs1);
+		        p = PlotCurrentPar();
             end
-            
+
+            function btn_Find(src,evt)
+                v = getTchb();
+                num = round(get(sld,'Value'));
+                curT = obj.getF('T',v(1));
+                name = obj.data.(curT).names{num};
+                curA = obj.getF('A',num,v(1));
+                temp = ResonatorAcousticData([obj.path,name],f.UserData.Diapason);
+                [vi, ind_i] = max(temp.Frequency);
+                
+                if vi > max(obj.data.(curT).(curA).Frequency)
+                    p_ind = 2;
+                else
+                    p_ind = 1;
+                end
+                obj.data.(curT).(curA).Frequency(p_ind) = temp.Frequency(ind_i);
+                obj.data.(curT).(curA).Amplitude(p_ind) = temp.Amplitude(ind_i);
+                obj.data.(curT).(curA).QFactor(p_ind) = temp.QFactor(ind_i);
+                PlotCurrentFft();
+                
+                lbx = src.Parent.Parent.Parent.findobj('Tag','lst_file');
+                nameObj = lbx.String{lbx.Value};
+                assignin('base',nameObj,obj);
+                
+                % redraw vertical cursor on axes 1
+                p = PlotCurrentPar();
+                YL1 = get(axs1,'YLim');
+                n = obj.data.(getF(obj,'T',v(1))).angles(num);
+                plot([n, n]',YL1','k--','linewidth',1.5,'Parent',axs1);
+                set(axs1,'YLim',YL1);
+            end
+
+            function findPoint(gcbo, eventdata, handles)
+                P = eventdata.IntersectionPoint(1);
+                PlotCurrentFft();
+                plot([P P],axs2.YLim,'-k','linewidth',1.5,'Parent',axs2);
+                plot([P+0.2 P+0.2],axs2.YLim,'--k','linewidth',0.7,'Parent',axs2);
+                plot([P-0.2 P-0.2],axs2.YLim,'--k','linewidth',0.7,'Parent',axs2);
+                f.UserData.Diapason = [P-0.2 P+0.2];
+            end
+                     
             function btn_rew(src,evt)
                     
                     buf_1 = edtF_P1.String;
@@ -1130,6 +1182,7 @@ classdef TemperatureDataSound
                 end
             end
             
+
             function btn_set(src,evt)
 
                 num = round(get(sld,'Value'));
@@ -1142,7 +1195,7 @@ classdef TemperatureDataSound
                 A_P2 = str2num(edtA_P2.String);
                 Q_P1 = str2num(edtQ_P1.String);
                 Q_P2 = str2num(edtQ_P2.String);
-                p = PlotCurrentPar(axs1);
+                p = PlotCurrentPar();
 
                 obj = obj.setData('Frequency',v(1),1,num,F_P1);
                 obj = obj.setData('Frequency',v(1),2,num,F_P2);
@@ -1151,11 +1204,8 @@ classdef TemperatureDataSound
                 obj = obj.setData('QFactor',v(1),1,num,Q_P1);
                 obj = obj.setData('QFactor',v(1),2,num,Q_P2);
                 
-                p = PlotCurrentPar(axs1);
-                p = PlotCurrentFft();
-
-                axs1.YLimMode = 'auto';
-                axs2.YLimMode = 'auto';
+                p = PlotCurrentPar();
+                p = PlotCurrentFft();                
                 
                 YL1 = get(axs1,'YLim');
                 n = obj.data.(getF(obj,'T',v(1))).angles(num);
@@ -1166,9 +1216,10 @@ classdef TemperatureDataSound
             end
             
 			% Plot functions             
+            %----------------------------------------------
         	%----------------------------------------------
-            function p = PlotCurrentPar(hAx)
-            	cla(hAx);
+            function p = PlotCurrentPar()
+            	cla(axs1);
                 hold on;
             	p = [];
             	temper = [];
@@ -1193,7 +1244,7 @@ classdef TemperatureDataSound
 		            		color_plot = ['--*',curColors(j)];
 		            	end
 		            	p = plot(obj.data.(obj.getF('T',temper(j))).angles(ind),...
-                            s(ind,j),color_plot,'linewidth',1.5,'Parent',hAx);  
+                            s(ind,j),color_plot,'linewidth',1.5,'Parent',axs1);  
                         if (obj.data.(obj.getF('T',temper(j))).angles(end)) > xlim_max
                             xlim_max = (obj.data.(obj.getF('T',temper(j))).angles(end));
                         end
@@ -1201,13 +1252,14 @@ classdef TemperatureDataSound
 
                 end
                 if xlim_max == 0; xlim_max = 1; end;
-                set(gca,'XLim',[0 xlim_max]);
+                set(axs1,'XLim',[0 xlim_max]);
+                axs1.YLimMode = 'auto';
             end
 
 
-            function p = PlotCurrentFft()
-            	p = [];
-            	cla(axs2);
+            function p = PlotCurrentFft() 
+                p = [];
+                cla(axs2);
 
             	% get temperature checkboxes
                 temper = getTchb();
@@ -1227,7 +1279,8 @@ classdef TemperatureDataSound
 	                [xx, yy] = InterpFreq(obj, temper(i), numA);
 	                fq = obj.data.(curT).(curA).R_fft_data(:,1);
 	                A = obj.data.(curT).(curA).R_fft_data(:,2);
-	                plot(xx, yy,[T_colors(temper(i)),'.'],'Parent',axs2)
+	                h = plot(xx, yy,[T_colors(temper(i)),'.'],'Parent',axs2);
+                    set(h,'ButtonDownFcn',@findPoint,'HitTest','on','PickableParts','all');
 	                % find resonance 1 parameters
 	                if obj.data.(curT).(curA).Frequency(1) ~= 0
 	                	F1 = obj.data.(curT).(curA).Frequency(1);
@@ -1269,6 +1322,7 @@ classdef TemperatureDataSound
                     axs2.XLim = [min_marg-3 max_marg+3];
                     % end% try
                 end
+                axs2.YLimMode = 'auto';
             end
 
 
@@ -1282,8 +1336,63 @@ classdef TemperatureDataSound
 				v = find(v);
             end
 
+            function btn_PlotFFt_all(src,evt)
+                % initialise
+                v = getTchb();
+                curT = obj.getF('T',v(1));
+                Angles = obj.getData('Angle',v(1));
+                % plot
+                fft_plot_all = figure;
+                hold on; 
+                meanFq_1 = obj.data.(curT).meanFq_1;
+                meanFq_2 = obj.data.(curT).meanFq_2;
+                for i = 1:length(Angles)
+                    curA = obj.getF('A',i,v(1));
+                    [xx, yy] = obj.InterpFreq(v(1),i);
+                    [vv, d1] = min(abs(xx-(meanFq_1-1)));
+        		    [vv, d2] = min(abs(xx-(meanFq_2+1)));
+                    plot(xx(d1:d2),yy(d1:d2));
+                    ind_F = find(obj.data.(curT).(curA).Frequency);
+                    for j = 1:length(ind_F)
+                        plot(obj.data.(curT).(curA).Frequency(ind_F(j)),...
+                            obj.data.(curT).(curA).Amplitude(ind_F(j)),...
+                            'o','MarkerSize',6,'linewidth',3);
+                    end
+                end
+                grid;
+                YL = get(gca,'YLim');
+                plot([meanFq_1 meanFq_1],YL,'k--','linewidth',2);
+                plot([meanFq_2 meanFq_2],YL,'k--','linewidth',2);
+                set(gca,'GridAlpha',1,'XGrid','on','YGrid','on');
+                title(curT);
+                ylabel('Amplitude');
+                xlabel('Frequency');
+            end
 
-        end
+            function btn_Plot_yy(src,evt)
+                figure;
+                v = getTchb(); 
+                curT = obj.getF('T',v(1));
+                Angles = obj.getData('Angle',v(1));
+                name = ppmGraph.String{ppmGraph.Value};
+                D1 = obj.getData(name,v(1),1);
+                D2 = obj.getData(name,v(1),2);
+                ind_1 = find(D1~=0);
+                ind_2 = find(D2~=0);
+                [yy_axes,L1,L2] = plotyy(Angles(ind_1),D1(ind_1),Angles(ind_2),D2(ind_2));
+                title(name);
+                set(L1,'Marker','o','linewidth',2)
+                set(L2,'Marker','o','linewidth',2)
+                set(yy_axes(1),'GridAlpha',1,'XGrid','on','YGrid','on');
+                set(yy_axes(2),'GridAlpha',1,'XGrid','on','YGrid','on');
+                xlabel('degree');
+                ylabel(yy_axes(1),[name,' 1']);
+                ylabel(yy_axes(2),[name,' 2']);
+            end
+
+        end   % End PlotByList
+        %-------------------------------------------------------
+
         
         function curF = getF(obj,name,num,numT)
             % function [curT, curA] = getF('name',num)
@@ -1468,6 +1577,60 @@ classdef TemperatureDataSound
                 name = ['v',name];
             end
         end
+
+        function [ft,rmse] = sinefit(t,y,varargin) 
+            % sinefit fits
+
+            Nterms = 3;   
+            switch Nterms 
+               case 2 
+                  f = @(A,t) A(1)*sin((yr + A(2))*2*pi); 
+               case 3 
+                  f = @(A,t) A(1)*sin((yr + A(2))*2*pi) + A(3); 
+               case 4 
+                  f = @(A,t) A(1)*sin((yr + A(2))*2*pi) + A(3) + A(4)*yr; 
+               case 5 
+                  f = @(A,t) A(1)*sin((yr + A(2))*2*pi) + A(3) + A(4)*yr + A(5)*yr.^2; 
+            end
+            %% Solve the equation
+            % Set some options for fminsearch:        
+            opts = optimset('Display','off');
+            % Define a sum-of-squares function that figures out the mismatch between data and the fit: 
+            fcn = @(A) sum((f(A,t) - y).^2); 
+                  
+            switch Nterms    
+               case 2
+                  ft = fminsearch(fcn,[rms(y)*2/sqrt(2) -0.5],opts); 
+               case 3 
+                  ft = fminsearch(fcn,[rms(y)*2/sqrt(2) -0.5 mean(y)],opts); 
+               case 4
+                  pv = polyfit(yr,y,1); 
+                  ft = fminsearch(fcn,[rms(detrend(y))*2/sqrt(2) -0.5 pv(2) pv(1)],opts); 
+               case 5
+                  pv = polyfit(yr,y,2); 
+                  ft = fminsearch(fcn,[rms(detrend(y))*2/sqrt(2) -0.5 pv(3) pv(2) pv(1)],opts); 
+               otherwise
+                  error('I am totally dumbfounded about how we could have possibly gotten here.') 
+            end
+            %% Package up the outputs
+            % Standardize amplitude and phase terms: 
+            if ft(1)<0 
+               ft(1) = -ft(1);  % ensures a positive amplitude
+               ft(2) = ft(2)+.5;% but also means we'll have to change the phase by half a cycle. 
+            end
+            % Convert the phase term (decimal years) into something meaningful (day of year corresponding to max of sine wave):
+            ft(2) = 365.24*(mod(0.25 - ft(2),1)); 
+            % Estimate errors: 
+            if nargout==2
+               rmse = rms(y - sineval(ft,t)); 
+            end
+        end
+
+
+
+
+
+
 
 	end % methods 
 
