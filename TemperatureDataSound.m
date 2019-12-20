@@ -157,7 +157,15 @@ classdef TemperatureDataSound
                 end
                 close(f_w);
                 % save results in variable
-                assignin('base', edt_save.String, obj);
+                vars = evalin('base','whos');
+                StorageTDS = [];
+                for i= 1:length(vars)
+                    if strcmp(vars(i).name,'StorageTDS')
+                        StorageTDS =  evalin('base','StorageTDS');
+                    end
+                end
+                StorageTDS.(edt_save.String) = obj;
+                assignin('base','StorageTDS',StorageTDS);
                 refresh_listbox(src,evt);
 	        end
             
@@ -166,8 +174,9 @@ classdef TemperatureDataSound
                 vars = evalin('base','whos');
                 list = {''}; j = 1;
                 for i= 1:length(vars)
-                    if strcmp(vars(i).class,'TemperatureDataSound')
-                        list{j} = vars(i).name; j = j+1;
+                    if strcmp(vars(i).name,'StorageTDS')
+                        StorageTDS =  evalin('base','StorageTDS');
+                        list = fieldnames(StorageTDS);
                     end
                 end
                 if isempty(list)
@@ -190,11 +199,11 @@ classdef TemperatureDataSound
                 	return;
                 end
                 if strcmp(str,'PlotByList')
-					evalin('base',[nm,'.PlotByList']); 
+					evalin('base',['StorageTDS.',nm,'.PlotByList']); 
                 elseif strcmp(str,'Protocol')
-					evalin('base',[nm,'.getProtocol']); 
+					evalin('base',['StorageTDS.',nm,'.getProtocol']); 
 				elseif strcmp(str,'Plot_TK4')
-					evalin('base',[nm,'.Get_TKF(1,1)']);
+					evalin('base',['StorageTDS.',nm,'.Get_TKF(1,1)']);
                 end
             end
 
@@ -753,21 +762,18 @@ classdef TemperatureDataSound
             Amplitude1 = [Amplitude0(ind1,1); Amplitude0(ind2,2)];
             QFactor1 = [QFactor0(ind1,1); QFactor0(ind2,2)];
             Index = [ind1;ind2];
-            if ~isempty(intersect(ind1,ind2))
-                disp('!!!!!!!!!!!!!!!!!!!!!! the same index find')
-            end
             % Sort new two freq and ampl vectors;
             ln = length(Frequency0(:,1));
             vFq1(1:ln) = 0; vFq2(1:ln) = 0;
             vAm1(1:ln) = 0; vAm2(1:ln) = 0;
             vQf1(1:ln) = 0; vQf2(1:ln) = 0;
-            figure; hold on; plot(ind1,Frequency0(ind1,1),'o-'); plot(ind2,Frequency0(ind2,2),'o-');
-            plot(get(gca,'XLim'),[fq1 fq1],'r--');
-            plot(get(gca,'XLim'),[fq2 fq2],'r--');
-            bb = plot([Index(1) Index(1)],get(gca,'YLim'),'b--');
+%             figure; hold on; plot(ind1,Frequency0(ind1,1),'o-'); plot(ind2,Frequency0(ind2,2),'o-');
+%             plot(get(gca,'XLim'),[fq1 fq1],'r--');
+%             plot(get(gca,'XLim'),[fq2 fq2],'r--');
+%             bb = plot([Index(1) Index(1)],get(gca,'YLim'),'b--');
             for i = 1:length(Index)
-                        delete(bb);
-                bb = plot([Index(i) Index(i)],get(gca,'YLim'),'b--');
+%                         delete(bb);
+%                 bb = plot([Index(i) Index(i)],get(gca,'YLim'),'b--');
                 if abs(Frequency1(i)-fq1)<abs(Frequency1(i)-fq2)
                     if vFq1(Index(i))==0
                         vFq1(Index(i)) = Frequency1(i);
@@ -787,7 +793,7 @@ classdef TemperatureDataSound
                             vQf1(Index(i)) = QFactor1(i);
                         end
                     end
-                    plot(Index(i),vFq1(Index(i)),'bp');
+%                     plot(Index(i),vFq1(Index(i)),'bp');
                 elseif abs(Frequency1(i)-fq2)<abs(Frequency1(i)-fq1)
                     if vFq2(Index(i))==0
                         vFq2(Index(i)) = Frequency1(i);
@@ -807,7 +813,7 @@ classdef TemperatureDataSound
                             vQf1(Index(i)) = QFactor1(i);
                         end
                     end
-                    plot(Index(i),vFq2(Index(i)),'r*');
+%                     plot(Index(i),vFq2(Index(i)),'r*');
                 end
 
             end
@@ -948,7 +954,12 @@ classdef TemperatureDataSound
             btnPlotYY_data = uicontrol('Parent',group3,'Style','pushbutton','Units','Normalized',...
                 'Position',[0.05 0.05 0.9 0.1],'callback',@btn_Plot_yy,...
                 'String','PlotYY','tag','Plot_yy','fontsize',11,'fontweight','normal');
-
+            btnPlotSineFit = uicontrol('Parent',group3,'Style','pushbutton','Units','Normalized',...
+                'Position',[0.05 0.25 0.9 0.1],'callback',@btn_sine_fint,...
+                'String','SineFit 1','tag','btnSineFit1','fontsize',11,'fontweight','normal');
+            btnPlotSineFit = uicontrol('Parent',group3,'Style','pushbutton','Units','Normalized',...
+                'Position',[0.05 0.15 0.9 0.1],'callback',@btn_sine_fint,...
+                'String','SineFit 2','tag','btnSineFit2','fontsize',11,'fontweight','normal');
             % group #2 elements
             %=====================================
             % axes for plot in current point
@@ -978,7 +989,6 @@ classdef TemperatureDataSound
             edtF_P2 = uicontrol('Parent',group2,'Style','edit','Units','Normalized',...
                 'Position',[0.55 0.75 0.45 0.09],'String','0','Value', 1, ...
                 'tag','editFP2','fontsize',8);
-
 
             txt_A = uicontrol('Parent',group2,'Style','text','Units','Normalized',...
                 'Position',[0.25 0.63 0.47 0.09],'String','Amplitude','Value', 1, ...
@@ -1030,7 +1040,25 @@ classdef TemperatureDataSound
             btnPlotAllFFt = uicontrol('Parent',group4,'Style','pushbutton','Units','Normalized',...
                 'Position',[0.05 0.05 0.9 0.1],'callback',@btn_PlotFFt_all,...
                 'String','Plot All','tag','btn_PlotFFtAll','fontsize',11,'fontweight','normal');
-
+            
+            edit_dFQ1 = uicontrol('Parent',group4,'Style','edit','Units','Normalized',...
+                'Position',[0.25 0.85 0.45 0.1],...
+                'String','0','tag','edt_dFQ1','fontsize',11,'fontweight','normal');
+            text_dFQ1 = uicontrol('Parent',group4,'Style','text','Units','Normalized',...
+                'Position',[0.01 0.85 0.23 0.1],...
+                'String','dFq1','tag','txt_dFQ1','fontsize',11,'fontweight','normal');
+            btn_dFQ1 = uicontrol('Parent',group4,'Style','pushbutton','Units','Normalized',...
+                'Position',[0.72 0.85 0.27 0.1],'callback',@btn_zero_Q,...
+                'String','0','tag','btn_dFQ1','fontsize',11,'fontweight','normal');
+            edit_dFQ2 = uicontrol('Parent',group4,'Style','edit','Units','Normalized',...
+                'Position',[0.25 0.7 0.45 0.1],...
+                'String','0','tag','edt_dFQ2','fontsize',11,'fontweight','normal');
+            text_dFQ2 = uicontrol('Parent',group4,'Style','text','Units','Normalized',...
+                'Position',[0.01 0.7 0.23 0.1],...
+                'String','dFq2','tag','txt_dFQ2','fontsize',11,'fontweight','normal');
+            btn_dFQ2 = uicontrol('Parent',group4,'Style','pushbutton','Units','Normalized',...
+                'Position',[0.72 0.7 0.27 0.1],'callback',@btn_zero_Q,...
+                'String','0','tag','btn_dFQ2','fontsize',11,'fontweight','normal');
             cla(axs1);
             cla(axs2);
             hold on;
@@ -1143,6 +1171,33 @@ classdef TemperatureDataSound
                 n = obj.data.(getF(obj,'T',v(1))).angles(num);
                 plot([n, n]',YL1','k--','linewidth',1.5,'Parent',axs1);
                 set(axs1,'YLim',YL1);
+                
+                % refresh data in edits
+                if p_ind == 1
+                    edtF_P1.String = temp.Frequency(ind_i);
+                    edtA_P1.String = temp.Amplitude(ind_i);
+                    edtQ_P1.String = temp.QFactor(ind_i);
+                end
+                if p_ind == 2
+                    edtF_P2.String = temp.Frequency(ind_i);
+                    edtA_P2.String = temp.Amplitude(ind_i);
+                    edtQ_P2.String = temp.QFactor(ind_i);
+                end
+            end
+            
+            function btn_zero_Q(src,evt)
+                v = getTchb();
+                num = round(get(sld,'Value'));
+                curT = obj.getF('T',v(1));
+                curA = obj.getF('A',num,v(1));
+                if strcmp(src.Tag,'btn_dFQ1')
+                    obj.data.(curT).(curA).QFactor(1) = 0;
+                end
+                if strcmp(src.Tag,'btn_dFQ2')
+                    obj.data.(curT).(curA).QFactor(2) = 0;
+                end
+                PlotCurrentFft();
+                PlotCurrentPar();
             end
 
             function findPoint(gcbo, eventdata, handles)
@@ -1277,8 +1332,6 @@ classdef TemperatureDataSound
                     curT = getF(obj,'T',temper(i));
                     curA = getF(obj,'A',numA,temper(i));
 	                [xx, yy] = InterpFreq(obj, temper(i), numA);
-	                fq = obj.data.(curT).(curA).R_fft_data(:,1);
-	                A = obj.data.(curT).(curA).R_fft_data(:,2);
 	                h = plot(xx, yy,[T_colors(temper(i)),'.'],'Parent',axs2);
                     set(h,'ButtonDownFcn',@findPoint,'HitTest','on','PickableParts','all');
 	                % find resonance 1 parameters
@@ -1287,15 +1340,39 @@ classdef TemperatureDataSound
 	                	diap = [0 0]; % diapason for find res freq
 	                	[v diap(1)] = min(abs(xx-(F1-0.02)));
 	                	[v diap(2)] = min(abs(xx-(F1+0.02)));
+                            if obj.data.(curT).(curA).QFactor(1) ~= 0
+                                % find and show QFactor 1
+                                [v indF11] = min(abs(xx-(F1)));
+                                F11 = xx(indF11);
+                                v_v = 0.707 * obj.data.(curT).(curA).Amplitude(1);
+                                dmF = (obj.data.(curT).meanFq_2 - obj.data.(curT).meanFq_1)/2;
+                                if dmF > 0.6; dmF = 0.6; end;
+                                [v, min_m] = min(abs(xx-(F1-dmF)));
+                                [v, max_m] = min(abs(xx-(F1+dmF)));
+                                [v, ind_1] = min(abs(yy(min_m:indF11)-v_v));
+                                [v, ind_2] = min(abs(yy(indF11:max_m)-v_v));
+                                qm1 = min_m + ind_1 - 1;
+                                qm2 = ind_2 + indF11 - 1;
+                                plot([xx(qm1) xx(qm2)],[yy(qm1) yy(qm2)],T_colors(temper(i)));
+                                dQf1 = yy(qm2) - yy(qm1);
+                                set(edit_dFQ1,'String', sprintf('%2.3e',dQf1));
+                            else
+                                edit_dFQ1.String = '0';
+                            end
+                            
 	                	[fr1 fr1_ind] = min(abs(yy(diap(1):diap(2))-F1));
  	                	fr1_ind = diap(1) + fr1_ind + 1;
 	                	Q1 = obj.data.(curT).(curA).QFactor(1);
-
+                        
+                
 	                	plot(xx(fr1_ind),yy(fr1_ind),[T_colors(temper(i)),'v'],'MarkerSize',10,'Parent',axs2);
+                        
 	                	text(xx(fr1_ind)+0.05,yy(fr1_ind)+yy(fr1_ind)*0.01,['F1 = ',num2str(F1)],...
                             'Color',T_colors(temper(i)));
 	                	text(xx(fr1_ind)+0.15,yy(fr1_ind)*0.707,['Q1 = ',num2str(Q1)],...
                             'Color',T_colors(temper(i)));
+                    else
+                        edit_dFQ1.String = '0';
 	                end
 
 	                if obj.data.(curT).(curA).Frequency(2) ~= 0
@@ -1303,6 +1380,25 @@ classdef TemperatureDataSound
 	                	diap = [0 0]; % diapason for find res freq
 	                	[v diap(1)] = min(abs(xx-(F2-0.02)));
 	                	[v diap(2)] = min(abs(xx-(F2+0.02)));
+                            if obj.data.(curT).(curA).QFactor(2) ~= 0
+                                % find and plot QFactor 2
+                                [v indF21] = min(abs(xx-(F2)));
+                                F21 = xx(indF21);
+                                v_v = 0.707 * obj.data.(curT).(curA).Amplitude(2);
+                                dmF = (obj.data.(curT).meanFq_2 - obj.data.(curT).meanFq_1)/2;
+                                if dmF > 0.6; dmF = 0.6; end;
+                                [v, min_m] = min(abs(xx-(F2-dmF)));
+                                [v, max_m] = min(abs(xx-(F2+dmF)));
+                                [v, ind_1] = min(abs(yy(min_m:indF21)-v_v));
+                                [v, ind_2] = min(abs(yy(indF21:max_m)-v_v));
+                                qm1 = min_m + ind_1 - 1;
+                                qm2 = ind_2 + indF21 - 1;
+                                plot([xx(qm1) xx(qm2)],[yy(qm1) yy(qm2)],T_colors(temper(i)));
+                                dQf2 = yy(qm2) - yy(qm1);
+                                set(edit_dFQ2,'String', sprintf('%2.3e',dQf2));
+                            else
+                                edit_dFQ2.String = '0';
+                            end
 	                	[fr2 fr2_ind] = min(abs(yy(diap(1):diap(2))-F2));
 	                	fr2_ind = diap(1) + fr2_ind + 1;
 	                	Q2 = obj.data.(curT).(curA).QFactor(2);
@@ -1312,6 +1408,8 @@ classdef TemperatureDataSound
                             'Color',T_colors(temper(i)),'Parent',axs2);
 	                	text(xx(fr2_ind)+0.15,yy(fr2_ind)*0.707,['Q2 = ',num2str(Q2)],...
                             'Color',T_colors(temper(i)),'Parent',axs2);
+                    else
+                        edit_dFQ2.String = '0';
                     end
                     if obj.data.(curT).meanFq_1 < min_marg
                         min_marg = obj.data.(curT).meanFq_1;
@@ -1382,13 +1480,266 @@ classdef TemperatureDataSound
                 [yy_axes,L1,L2] = plotyy(Angles(ind_1),D1(ind_1),Angles(ind_2),D2(ind_2));
                 title(name);
                 set(L1,'Marker','o','linewidth',2)
-                set(L2,'Marker','o','linewidth',2)
+                set(L2,'Marker','*','linewidth',2)
                 set(yy_axes(1),'GridAlpha',1,'XGrid','on','YGrid','on');
                 set(yy_axes(2),'GridAlpha',1,'XGrid','on','YGrid','on');
                 xlabel('degree');
                 ylabel(yy_axes(1),[name,' 1']);
                 ylabel(yy_axes(2),[name,' 2']);
             end
+            
+            function btn_sine_fint(src,evt)
+
+                v = getTchb(); 
+                curT = obj.getF('T',v(1));
+                Angles = obj.getData('Angle',v(1));
+                name = ppmGraph.String{ppmGraph.Value};
+                
+                if strcmp(src.Tag,'btnSineFit1')
+                    IND = 1;
+                else
+                    IND = 2;
+                end
+                
+                Data = obj.getData(name,v(1),IND);
+                ind = find(Data~=0);
+                angle = Angles(ind)';
+                Data = Data(ind);
+                SineP = sineFit(angle,Data);
+                
+                figure;
+                hold on;
+                set(gca,'XGrid','on','YGrid','on','GridAlpha',1);
+                
+                plot(angle,Data,'bo:');
+                xx = 0:1:angle(end);
+                yy = SineP(1)+SineP(2)*sin(2*pi*SineP(3)*xx+SineP(4));
+                plot(xx,yy,'r.','linewidth',2);
+
+            end
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            function SineParams=sineFit(x,y)
+            %Purpose: Estimation of noisy sine curve parameters by FFT and non linear fitting.
+            %
+            % Syntax:
+            %       [SineParams]=sineFit(x,y)
+            %       Input: x and y values, y=offs+amp+sin(2*pi*f*x+phi)+noise
+            %       Output: SineParams(1): offset (offs)
+            %               SineParams(2): amplitude (amp)
+            %               SineParams(3): frequency (f)
+            %               SineParams(4): phaseshift (phi)
+            %       yOut=offs+amp*sin(2*pi*f*x+phi)
+            %
+            % Example:
+            % % generate y(x)
+            % x=-4:5;
+            % y=1+2*(sin(2*pi*0.1*x+2)+0.3*randn(size(x)));%Sine + noise
+            % [SineP]=sineFit(x,y)
+            % figure;
+            % xx=x(1):(x(end)-x(1))/222:x(end);%better resolution
+            % plot(x,y,xx,SineP(1)+SineP(2)*sin(2*pi*SineP(3)*xx+SineP(4)));
+            % %uncomment following lines if you want to save y=f(x) and run it sineFitDemo
+            % %paramsClean=[1,2,0.1,2];
+            % % save('xy.mat','x','y','paramsClean');
+            %
+            %You may want to comment/uncomment the last statement (PlotResults) in the first function.
+            %Author: Peter Seibold
+            % FFT
+            pi2=2*pi;
+            NumSamples=length(x);
+            T=x(2)-x(1);
+            fNy=1/(2*T);%Nyquist frequency
+            offs=mean(y);%DC value
+            y_m=y-offs;%FFT much better without offset
+            n = 128*2^nextpow2(NumSamples);%heavy zero padding
+            Y = fft(y_m,n);%Y(f)
+            n2=floor(n/2);
+            P2 = abs(Y/NumSamples);
+            P1 = P2(1:n2+1);
+            P1(2:end-1) = 2*P1(2:end-1);
+            fs = (0:n2)/n/T;% frequency scale
+            % %FFT parameters at peak
+            [maxFFT,maxFFTindx]=max(P1);%Peak magnitude and location
+            fPeak=fs(maxFFTindx);% f at peak
+            Phip=angle(Y(maxFFTindx))+pi/2;%Phi-Peak is for cos, sin(90°+alpha)=cos(betta), alpha=-betta
+            Phip=Phip-x(1)*fPeak*pi2;%shift for phi at x=0
+            %Better estimate for offset:
+            omega=pi2*fPeak;
+            offs=offs-maxFFT*(cos(omega*x(1)+Phip)-cos(omega*x(end)+Phip))/(omega*(x(end)-x(1)));
+            % Fitting
+            paramsFFTp=[offs,maxFFT,fPeak,Phip];
+            if maxFFTindx<0.99*n2
+              %FFT peak not at f-Nyquist
+              NumPeaks=1;
+              paramsFFT=paramsFFTp;
+            else
+              %Samples per period close to 2, max FFT peak close to f-Nyquist
+              %Set 1st evaluation point a little below f-Nyquist
+              fIndxExtra1=round(maxFFTindx*.995);
+              fExtra1=fs(fIndxExtra1);
+              PhiExtra1=angle(Y(fIndxExtra1))+pi/2-x(1)*fExtra1*pi2;
+              %extra f for evaluation left of max peak 
+              fIndxExtra2=round(0.75*maxFFTindx);
+              fExtra2=fs(fIndxExtra2);
+              PhiExtra2=angle(Y(fIndxExtra2))+pi/2-x(1)*fExtra2*pi2;
+              paramsFFT=[[offs,maxFFT,fPeak*.995,PhiExtra1];...
+                [offs,0.8*maxFFT,fExtra2,PhiExtra2]]; 
+              NumPeaks=2;
+            end
+            paramsOut=zeros(NumPeaks,6);%for regression outputs
+            % find best fit in time domain
+            modelfun = @(paramc,x) paramc(1) + paramc(2) * sin(pi2*paramc(3)*x+paramc(4));
+            opts = statset('nlinfit');opts.MaxIter=1000;%620 is the limit in evaluated test set.
+            warning('off','all');%disable warnings from nlinfit
+            for i=1:NumPeaks
+              [SineParams,~,~,~,MSE] = nlinfit(x,y,modelfun,paramsFFT(i,:),opts);
+              %make frequency positive
+              if SineParams(3)<0
+                SineParams(3)=-SineParams(3);
+                SineParams(4)=pi-SineParams(4);%sin(2*pi*-f-phi)=sin(2*pi*f+phi+pi)
+              end
+              %make amplitude positive
+              if SineParams(2)<0
+                SineParams(2)=-SineParams(2);
+                SineParams(4)=SineParams(4)+pi;
+              end
+              paramsOut(i,:)=[SineParams,MSE,MSE];
+              if NumSamples<5% && SineParams(3)<=fNy
+                %No valid MSE from nlinfit if num samples <5
+                %Overwrite MSE, set priority to 1st result (by *i)
+                %will be overwritten again with max allowed amplitude
+                paramsOut(i,5)=0.003*i;
+              end
+              if SineParams(3)>fNy
+                %f larger than nyquist limit
+                paramsOut(i,5)=Inf;%set MSE to terrible
+              end
+            end
+            warning('on','all');
+            % take best manipulated score
+            [MSEmin,MSEminIndx]=min(paramsOut(:,5));
+            SineParams=paramsOut(MSEminIndx,1:4);
+            %  Determine max allowed amplitude by MSEmin
+            if MSEmin<=0.00001 || ...%extremly good MSE
+                NumSamples<5 || ... %no MSE with nlinfit for less than 5 samples
+                (NumSamples==5 && SineParams(3)<0.8*paramsFFT(1,3)) ||... %num period propably <1
+                (MSEmin<1 && x(end)-x(1)<0.5/SineParams(3))%propably less than 0.5 periods
+              maxAmp=66*maxFFT;%max allowed amplitude
+            elseif MSEmin>0.3
+              maxAmp=4*maxFFT;
+            elseif MSEmin>0.01
+              maxAmp=6*maxFFT;
+            elseif MSEmin>0.001
+              maxAmp=18*maxFFT;
+            else
+              %very good MSE, 0.00001 < MSE <0.001
+              maxAmp=33*maxFFT;
+            end
+            % maxAmp=0;%TEST! Force FFT output
+            if SineParams(2)>maxAmp || SineParams(3)>fNy
+              %Best regression has too big amplitude or is over Nyquist limit,
+              %take original FFT result
+              SineParams=paramsFFTp;
+              MSE=NaN;%for PlotResults
+            else
+              MSE=paramsOut(MSEminIndx,6);%for PlotResults
+            end
+            %make phase between 0 and 2 pi
+            SineParams(4)=rem(SineParams(4),pi2);
+            if SineParams(4)<0
+              SineParams(4)=SineParams(4)+pi2;
+            end
+        end
+        
+        %Plot, uncomment following line or delete all following lines:
+        % PlotResults(x,y,SineParams,paramsFFT,fs,P1,maxFFTindx,maxFFT,MSE);
+        % Plot results (optional, uncomment statement above)
+        function PlotResults(x,y,SineParams,paramsFFT,fs,P1,maxFFTindx,maxFFT,MSE)
+        xstart=x(1);
+        xend=x(end);
+        x3b=(1:numel(x));
+        x3=(xend-xstart)/(numel(x)-1)*(x3b-1)+xstart;
+        x4b=1:0.01:numel(x);
+        x4=(xend-xstart)/(numel(x)-1)*(x4b-1)+xstart;
+        y5=SineParams(1)+SineParams(2)*sin(2*pi*SineParams(3)*x4+SineParams(4));%result
+        yFFT=paramsFFT(1,1)+paramsFFT(1,2)*sin(2*pi*paramsFFT(1,3)*x4+paramsFFT(1,4));
+        figure;%for time
+        plot(x3,y,'k.');%time series as dots
+        xlabel('Time [s]');
+        hold on;
+        pIn=plot(x3,y,'r-');%time series as line
+        pFFT=plot(x4,yFFT,'color',[0.9 0.9 0.9]);
+        pResult=plot(x4,y5,'b-');%result
+        legend([pIn,pResult,pFFT],'Input','Result', 'FFT peak');
+        hold off;
+        grid on;
+        figure;%for FFT
+        % title('FFT');
+        pFFTin=plot(fs,P1,'r-');
+        xlabel('Frequency [Hz]');
+        ylabel('Amplitude')
+        hold on;
+        pFFTmax=plot(fs(maxFFTindx),maxFFT,'r+','MarkerSize',12);%max FFT
+        pFFTresult=plot(SineParams(3),SineParams(2),'b+','LineWidth',2);
+        plot([SineParams(3),SineParams(3)],[0,max(max(P1)*1.01,SineParams(2))],'b-');
+        hLeg=legend([pFFTin,pFFTresult,pFFTmax],'Input',...
+          ['Result:     ' num2str(SineParams(2),3) ', ' num2str(SineParams(3),3) ' Hz'],...
+          ['max FFT:  ' num2str(maxFFT,3) ', ' num2str(fs(maxFFTindx),3) ' Hz'],...
+          'Location','best');
+        title(hLeg,'        amplitude | frequency','FontSize',8);
+        hold off;
+        grid on;
+        disp(['Result:        y= ' num2str(SineParams(1)) ' + ' num2str(SineParams(2)) ...
+          ' * sin(2*pi*' num2str(SineParams(3)) '+' num2str(SineParams(4)) ')   MSE: ' num2str(MSE)]);
+        disp(['FFT:           y= ' num2str(paramsFFT(1,1)) ' + ' num2str(paramsFFT(1,2)) ...
+          ' * sin(2*pi*' num2str(paramsFFT(1,3)) '+' num2str(paramsFFT(1,4)) ')' ]);
+
+        end   
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
 
         end   % End PlotByList
         %-------------------------------------------------------
@@ -1530,7 +1881,7 @@ classdef TemperatureDataSound
         function [name, date] = scan_data_name(obj,path,arg)
             % get path to data files and return name for the protocol by default
             % with second argument can return such variables:
-            % arp "protocol" - return name for protocol by default
+            % arg "protocol" - return name for protocol by default
             % arg "date" - return data got from path
             % arg "variable" - return name for variable
 
@@ -1578,53 +1929,33 @@ classdef TemperatureDataSound
             end
         end
 
-        function [ft,rmse] = sinefit(t,y,varargin) 
-            % sinefit fits
+  
+        
+        
 
-            Nterms = 3;   
-            switch Nterms 
-               case 2 
-                  f = @(A,t) A(1)*sin((yr + A(2))*2*pi); 
-               case 3 
-                  f = @(A,t) A(1)*sin((yr + A(2))*2*pi) + A(3); 
-               case 4 
-                  f = @(A,t) A(1)*sin((yr + A(2))*2*pi) + A(3) + A(4)*yr; 
-               case 5 
-                  f = @(A,t) A(1)*sin((yr + A(2))*2*pi) + A(3) + A(4)*yr + A(5)*yr.^2; 
-            end
-            %% Solve the equation
-            % Set some options for fminsearch:        
-            opts = optimset('Display','off');
-            % Define a sum-of-squares function that figures out the mismatch between data and the fit: 
-            fcn = @(A) sum((f(A,t) - y).^2); 
-                  
-            switch Nterms    
-               case 2
-                  ft = fminsearch(fcn,[rms(y)*2/sqrt(2) -0.5],opts); 
-               case 3 
-                  ft = fminsearch(fcn,[rms(y)*2/sqrt(2) -0.5 mean(y)],opts); 
-               case 4
-                  pv = polyfit(yr,y,1); 
-                  ft = fminsearch(fcn,[rms(detrend(y))*2/sqrt(2) -0.5 pv(2) pv(1)],opts); 
-               case 5
-                  pv = polyfit(yr,y,2); 
-                  ft = fminsearch(fcn,[rms(detrend(y))*2/sqrt(2) -0.5 pv(3) pv(2) pv(1)],opts); 
-               otherwise
-                  error('I am totally dumbfounded about how we could have possibly gotten here.') 
-            end
-            %% Package up the outputs
-            % Standardize amplitude and phase terms: 
-            if ft(1)<0 
-               ft(1) = -ft(1);  % ensures a positive amplitude
-               ft(2) = ft(2)+.5;% but also means we'll have to change the phase by half a cycle. 
-            end
-            % Convert the phase term (decimal years) into something meaningful (day of year corresponding to max of sine wave):
-            ft(2) = 365.24*(mod(0.25 - ft(2),1)); 
-            % Estimate errors: 
-            if nargout==2
-               rmse = rms(y - sineval(ft,t)); 
-            end
-        end
+        
+%         function [ft,rmse] = sinefit(t,y) 
+%             f = @(A,t) A(1)*sin((y + A(2))*2*pi) + A(3); 
+%             % Solve the equation
+%             % Set some options for fminsearch:        
+%             opts = optimset('Display','off');
+%             % Define a sum-of-squares function that figures out the mismatch between data and the fit: 
+%             fcn = @(A) sum((f(A,t) - y).^2); 
+%             ft = fminsearch(fcn,[rms(y)*2/sqrt(2) -0.5 mean(y)],opts); 
+% 
+%             % Package up the outputs
+%             % Standardize amplitude and phase terms: 
+%             if ft(1)<0 
+%                ft(1) = -ft(1);  % ensures a positive amplitude
+%                ft(2) = ft(2)+.5;% but also means we'll have to change the phase by half a cycle. 
+%             end
+%             % Convert the phase term (decimal years) into something meaningful (day of year corresponding to max of sine wave):
+%             ft(2) = 365.24*(mod(0.25 - ft(2),1)); 
+%             % Estimate errors: 
+%             if nargout==2
+%                rmse = rms(y - sineval(ft,t)); 
+%             end
+%         end
 
 
 
